@@ -1,3 +1,4 @@
+// Copyright 2019 Andrew Suzuki. All rights reserved.
 package cmd
 
 import (
