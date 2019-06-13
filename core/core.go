@@ -40,17 +40,16 @@ func Run(c Config) {
     // begin polling printers in goroutine
     go poll(c)
 
-    // initial poll
+    // Initial poll
     updatePrinters(c.PrinterConfigs)
 
-    // set up endpoint and serve
-    http.HandleFunc("/", rootEndpoint)
+    // Set up endpoint and serve
+    http.HandleFunc("/api", apiEndpoint)
     log.Fatal(http.ListenAndServe(c.ServerAddress, nil))
 }
 
-// rootEndpoint is the root http handling function,
-// returns a json representation of the current printers state
-func rootEndpoint(w http.ResponseWriter, r *http.Request) {
+// apiEndpoint returns a json representation of the current printers state
+func apiEndpoint(w http.ResponseWriter, r *http.Request) {
     js, err := json.Marshal(printers)
     if err != nil {
         http.Error(w, "Could not generate response", http.StatusInternalServerError)
