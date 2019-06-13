@@ -20,7 +20,12 @@ var RootCmd = &cobra.Command{
 	Use:   "ospap",
 	Short: "safe publicly-accessible proxy for octoprint",
 	Run: func (cmd *cobra.Command, args []string) {
-        core.Run()
+        var c core.Config
+        viper.Unmarshal(&c)
+        if err := viper.Unmarshal(&c); err != nil {
+            log.Fatalf("Couldn't read config: %s", err)
+        }
+        core.Run(c)
     },
 }
 
