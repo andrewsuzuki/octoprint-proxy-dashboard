@@ -27,6 +27,7 @@ func requestWithPrinterConfig(method string, endpoint string, body io.Reader, p 
 	if len(p.ApiKey) > 0 {
 		req.Header.Set("X-Api-Key", p.ApiKey)
 	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	return resp, err
 }
