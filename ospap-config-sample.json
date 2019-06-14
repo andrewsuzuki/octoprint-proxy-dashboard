@@ -4,7 +4,7 @@
 	"printers": [
 		{
 			"name": "Octoprint Local",
-            "server_address": "octopi.local",
+            "server_address": "http://octopi.local",
             "api_key": "J24JFJ00994",
             "auto_connect": true
 		}

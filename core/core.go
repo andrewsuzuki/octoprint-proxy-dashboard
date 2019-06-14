@@ -14,6 +14,7 @@ type PrinterConfig struct {
 	Name          string `mapstructure:"name"`
 	ServerAddress string `mapstructure:"server_address"`
 	ApiKey        string `mapstructure:"api_key"`
+	AutoConnect   bool   `mapstructure:"auto_connect"`
 }
 
 type Config struct {
@@ -27,6 +28,7 @@ type Printer struct {
 
 	LastRetrieved time.Time `json:"last_retrieved"`
 	Errored       bool      `json:"errored"`
+	Connected     bool      `json:"connected"`
 
 	ApiVersion  string                 `json:"api_version"`
 	PrinterInfo map[string]interface{} `json:"printer_info"`
@@ -88,6 +90,14 @@ func updatePrinters(printerConfigs []PrinterConfig) {
 		p.Name = printerConfig.Name
 		p.LastRetrieved = time.Now()
 		p.Errored = false
+		p.Connected = false
+
+		connected, err := attemptConnectionIfNeeded(printerConfig)
+		if err != nil {
+			p.Errored = true
+			continue
+		}
+		p.Connected = connected
 
 		apiVersion, err := getApiVersion(printerConfig)
 		if err != nil {
@@ -95,6 +105,10 @@ func updatePrinters(printerConfigs []PrinterConfig) {
 			continue
 		}
 		p.ApiVersion = apiVersion
+
+		if !p.Connected {
+			continue
+		}
 
 		printerInfo, err := getPrinterInfo(printerConfig)
 		if err != nil {
