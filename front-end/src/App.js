@@ -2,6 +2,8 @@ import React from "react";
 import "./App.css";
 import Printer from "./Printer";
 
+const updateIntervalSeconds = 10;
+
 const endpoint =
   process.env.REACT_APP_SPAP_ENDPOINT || "http://localhost:8080/api";
 
@@ -22,7 +24,7 @@ export default class App extends React.Component {
   }
 
   startPolling = () => {
-    this.poller = setInterval(this.poll, 10 * 1000);
+    this.poller = setInterval(this.poll, updateIntervalSeconds * 1000);
     this.poll();
   };
 
@@ -77,13 +79,19 @@ export default class App extends React.Component {
               </span>{" "}
               Loading...
             </p>
-          ) : null}
+          ) : (
+            <p>
+              <small>Updates every {updateIntervalSeconds} seconds</small>
+            </p>
+          )}
         </div>
         <div className="App-content">
           {printers ? (
-            <div>
+            <div className="grid">
               {printers.map(printer => (
-                <Printer key={printer.name} printer={printer} />
+                <div className="col-md-6 col-xlg-4" key={printer.name}>
+                  <Printer printer={printer} />
+                </div>
               ))}
             </div>
           ) : isLoading ? null : (
