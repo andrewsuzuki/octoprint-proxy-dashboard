@@ -2,6 +2,8 @@
 
 Safe publicly-accessible proxy for Octoprint.
 
+![octoprint proxy screenshot](screenshot.png)
+
 ## Contributing
 
 1. Fork it!

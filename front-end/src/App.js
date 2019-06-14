@@ -81,7 +81,9 @@ export default class App extends React.Component {
             </p>
           ) : (
             <p>
-              <small>Updates every {updateIntervalSeconds} seconds</small>
+              <small>
+                Updates automatically every {updateIntervalSeconds} seconds
+              </small>
             </p>
           )}
         </div>

@@ -185,10 +185,7 @@ function Printer({ printer }) {
       <p>Last polled {new Date(last_retrieved).toLocaleTimeString()}</p>
       {errored ? <p>Could not contact server</p> : null}
       {!connected ? (
-        <p>
-          Octoprint <b>not connected</b> to printer. Please connect through
-          Octoprint.
-        </p>
+        <p>Not connected to printer. Please connect manually.</p>
       ) : (
         <React.Fragment>
           <Flags flags={get(printer_info, "state.flags")} />
