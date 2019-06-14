@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-
 	"github.com/andrewsuzuki/octoprint-spap/core"
 )
 
@@ -19,14 +18,14 @@ var cfgFile string
 var RootCmd = &cobra.Command{
 	Use:   "ospap",
 	Short: "safe publicly-accessible proxy for octoprint",
-	Run: func (cmd *cobra.Command, args []string) {
-        var c core.Config
-        viper.Unmarshal(&c)
-        if err := viper.Unmarshal(&c); err != nil {
-            log.Fatalf("Couldn't read config: %s", err)
-        }
-        core.Run(c)
-    },
+	Run: func(cmd *cobra.Command, args []string) {
+		var c core.Config
+		viper.Unmarshal(&c)
+		if err := viper.Unmarshal(&c); err != nil {
+			log.Fatalf("Couldn't read config: %s", err)
+		}
+		core.Run(c)
+	},
 }
 
 func Execute() {
@@ -69,6 +68,6 @@ func initConfig() {
 		log.Println("Using config file:", viper.ConfigFileUsed())
 	} else {
 		log.Println(err)
-        os.Exit(1)
+		os.Exit(1)
 	}
 }
