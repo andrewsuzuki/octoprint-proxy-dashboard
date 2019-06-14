@@ -94,8 +94,11 @@ func attemptConnectionIfNeeded(p PrinterConfig) (bool, error) {
 func connect(p PrinterConfig) error {
 	var connectBody = []byte(`{"command":"connect"}`)
 	resp, err := requestWithPrinterConfig("POST", endpointConnection, bytes.NewBuffer(connectBody), p)
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
-	return err
+	return nil
 }
 
 // getApiVersion requests the Octoprint api version
