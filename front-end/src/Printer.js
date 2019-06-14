@@ -25,7 +25,8 @@ function Printer({ printer }) {
       {errored ? <p>Could not contact server</p> : null}
       {!connected ? (
         <p>
-          Octoprint not connected to printer. Please connect through Octoprint.
+          Octoprint <b>not connected</b> to printer. Please connect through
+          Octoprint.
         </p>
       ) : (
         <React.Fragment>

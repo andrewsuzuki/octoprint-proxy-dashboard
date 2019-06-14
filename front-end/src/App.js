@@ -32,20 +32,33 @@ export default class App extends React.Component {
   };
 
   fetch = async () => {
+    const loaderId = this.startLoader();
+
+    try {
+      const response = await fetch(endpoint);
+      const json = await response.json();
+      this.stopLoader(loaderId);
+      return json;
+    } catch (e) {
+      this.stopLoader(loaderId);
+      return null;
+    }
+  };
+
+  startLoader = () => {
     const loaderId = nextLoaderId++;
 
     this.setState({
       loaders: [...this.state.loaders, loaderId]
     });
 
-    const response = await fetch(endpoint);
-    const json = await response.json();
+    return loaderId;
+  };
 
+  stopLoader = loaderId => {
     this.setState({
       loaders: this.state.loaders.filter(l => l !== loaderId)
     });
-
-    return json;
   };
 
   render() {
@@ -57,7 +70,14 @@ export default class App extends React.Component {
       <div className="App">
         <div className="App-header">
           <p>Octoprint Proxy</p>
-          {isLoading ? <p>Loading...</p> : null}
+          {isLoading ? (
+            <p>
+              <span role="img" aria-labelledby="hourglass">
+                ⌛
+              </span>{" "}
+              Loading...
+            </p>
+          ) : null}
         </div>
         <div className="App-content">
           {printers ? (
