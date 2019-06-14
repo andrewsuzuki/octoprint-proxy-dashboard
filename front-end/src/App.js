@@ -2,7 +2,8 @@ import React from "react";
 import "./App.css";
 import Printer from "./Printer";
 
-const endpoint = "http://localhost:8080/api";
+const endpoint =
+  process.env.REACT_APP_SPAP_ENDPOINT || "http://localhost:8080/api";
 
 let nextLoaderId = 0;
 

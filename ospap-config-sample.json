@@ -1,0 +1,12 @@
+{
+	"server_address": "localhost:8080",
+	"polling_interval": 5,
+	"printers": [
+		{
+			"name": "Octoprint Local",
+            "server_address": "octopi.local",
+            "api_key": "J24JFJ00994",
+            "auto_connect": true
+		}
+	]
+}
