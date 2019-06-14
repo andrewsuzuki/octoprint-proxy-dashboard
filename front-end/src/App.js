@@ -59,15 +59,26 @@ export default class App extends React.Component {
           <p>Octoprint Proxy</p>
           {isLoading ? <p>Loading...</p> : null}
         </div>
-        {printers ? (
-          <div>
-            {printers.map(printer => (
-              <Printer key={printer.name} printer={printer} />
-            ))}
-          </div>
-        ) : isLoading ? null : (
-          <p>Service not available</p>
-        )}
+        <div className="App-content">
+          {printers ? (
+            <div>
+              {printers.map(printer => (
+                <Printer key={printer.name} printer={printer} />
+              ))}
+            </div>
+          ) : isLoading ? null : (
+            <p>Service not available</p>
+          )}
+        </div>
+        <div className="App-footer">
+          &copy;{new Date().getFullYear()} Andrew Suzuki &middot;{" "}
+          <a
+            href="https://github.com/andrewsuzuki/octoprint-spap"
+            title="source on github"
+          >
+            source
+          </a>
+        </div>
       </div>
     );
   }

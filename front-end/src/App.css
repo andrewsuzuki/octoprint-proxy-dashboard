@@ -1,9 +1,21 @@
 .App {
     max-width: 95%;
     margin: 0 auto;
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
 }
 
 .App-header {
     height: 4em;
     margin-bottom: 1em;
+}
+
+.App-content {
+    flex: 1
+}
+
+.App-footer {
+    margin: 2em;
+    font-size: 0.9em;
 }
