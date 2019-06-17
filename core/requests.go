@@ -48,7 +48,8 @@ func getConnectionState(p PrinterConfig) (string, bool, error) {
 	}
 
 	stateString := gjson.Get(string(body), "current.state").String()
-	connected := strings.Contains(stateString, "Operational")
+	connected := strings.Contains(stateString, "Operational") ||
+		strings.Contains(stateString, "Printing")
 	return stateString, connected, nil
 }
 

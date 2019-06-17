@@ -157,8 +157,8 @@ function Progress({ progress }) {
           🖨️
         </span>
       )}{" "}
-      {completion}% printed (time printing: {formatSeconds(printTime)}, time
-      left: {formatSeconds(printTimeLeft)})
+      {completion.toFixed(0)}% printed (time printing:{" "}
+      {formatSeconds(printTime)}, time left: {formatSeconds(printTimeLeft)})
     </p>
   );
 }
