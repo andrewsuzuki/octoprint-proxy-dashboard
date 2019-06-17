@@ -48,16 +48,59 @@ func getConnectionState(p PrinterConfig) (string, bool, error) {
 	}
 
 	stateString := gjson.Get(string(body), "current.state").String()
-	connected := strings.Contains(stateString, "Operational") ||
-		strings.Contains(stateString, "Printing")
+	connected := isConnected(stateString)
 	return stateString, connected, nil
+}
+
+// canAttemptConnection reads a connection state string
+// and determines if the server can/should attempt connection
+// see possible state strings here:
+// https://github.com/foosel/OctoPrint/blob/1.3.11/src/octoprint/util/comm.py#L670
+func canAttemptConnection(stateString string) bool {
+	return strings.Contains(strings.ToLower(stateString), "offline")
+}
+
+// canAttemptConnection reads a connection state string
+// and determines if the server is connected
+// see possible state strings here:
+// https://github.com/foosel/OctoPrint/blob/1.3.11/src/octoprint/util/comm.py#L670
+func isConnected(stateString string) bool {
+	connectedStateStrings := []string{
+		"Operational",
+		"Cancelling",
+		"Pausing",
+		"Paused",
+		"Resuming",
+		"Finishing",
+		"Starting",
+		"Printing",
+		"Sending file to SD",
+		"Transferring file to SD",
+	}
+
+	lowerStateString := strings.ToLower(stateString)
+
+	for _, css := range connectedStateStrings {
+		if strings.ToLower(css) == lowerStateString {
+			return true
+		}
+	}
+
+	if strings.HasPrefix(lowerStateString, "starting") ||
+		strings.HasPrefix(lowerStateString, "printing") {
+		return true
+	}
+
+	// Besides Offline and such, there are other cases (Error, Unknown State)
+	// default to false (not connected)
+	return false
 }
 
 // attemptConnectionIfNeeded first attempts to get connection information from
 // Octoprint. If printer state is errored or offline, it will attempt to connect.
 // Finally, it returns bool true if connected, false if not.
 func attemptConnectionIfNeeded(p PrinterConfig) (bool, error) {
-	_, connected, err := getConnectionState(p)
+	stateString, connected, err := getConnectionState(p)
 
 	if err != nil {
 		return false, err
@@ -67,9 +110,9 @@ func attemptConnectionIfNeeded(p PrinterConfig) (bool, error) {
 		return true, nil
 	}
 
-	// Attempt connection, if configuration allows
+	// Attempt connection, if configuration and returned state allows
 
-	if !p.AutoConnect {
+	if !p.AutoConnect && canAttemptConnection(stateString) {
 		return false, nil
 	}
 
