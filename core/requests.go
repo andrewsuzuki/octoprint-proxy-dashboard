@@ -52,15 +52,15 @@ func getConnectionState(p PrinterConfig) (string, bool, error) {
 	return stateString, connected, nil
 }
 
-// canAttemptConnection reads a connection state string
+// canAttemptConnection reads printer config and a connection state string
 // and determines if the server can/should attempt connection
 // see possible state strings here:
 // https://github.com/foosel/OctoPrint/blob/1.3.11/src/octoprint/util/comm.py#L670
-func canAttemptConnection(stateString string) bool {
-	return strings.Contains(strings.ToLower(stateString), "offline")
+func canAttemptConnection(p PrinterConfig, stateString string) bool {
+	return p.AutoConnect && strings.Contains(strings.ToLower(stateString), "offline")
 }
 
-// canAttemptConnection reads a connection state string
+// isConnected reads a connection state string
 // and determines if the server is connected
 // see possible state strings here:
 // https://github.com/foosel/OctoPrint/blob/1.3.11/src/octoprint/util/comm.py#L670
@@ -112,7 +112,8 @@ func attemptConnectionIfNeeded(p PrinterConfig) (bool, error) {
 
 	// Attempt connection, if configuration and returned state allows
 
-	if !p.AutoConnect && canAttemptConnection(stateString) {
+	// check
+	if !canAttemptConnection(p, stateString) {
 		return false, nil
 	}
 
