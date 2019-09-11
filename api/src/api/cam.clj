@@ -8,11 +8,11 @@
 
 (defonce cams (atom {}))
 
-(defn poll
+(defn poll!
   "poll multiple cam servers, where nodes is a
   collection of maps with keys :id and :cam-address."
   [max-time nodes callback]
-  ; TODO make this async!
+  ; TODO make this async / make requests in parallel (using aleph instead of clj-http?)
   (doseq [{:keys [id cam-address]} nodes]
     (try
       (let [{:keys [status body]} (client/get cam-address {:socket-timeout max-time
@@ -37,7 +37,7 @@
 (defmacro with-interval [ms & body]
   `(go (loop [] (<! (timeout ~ms)) ~@body (recur))))
 
-(defn poll-start [ms nodes callback]
+(defn poll-start! [ms nodes callback]
   (println (str "started polling cams every " ms "ms"))
   (with-interval ms
-    (poll ms nodes callback)))
+    (poll! ms nodes callback)))

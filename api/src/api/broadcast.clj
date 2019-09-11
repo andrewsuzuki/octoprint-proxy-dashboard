@@ -30,11 +30,16 @@
 
 ;; specific broadcasters
 
-(defn broadcast-cam [store printer-id cam]
+(defn broadcast-cam! [store printer-id cam]
   (let [m {:type :new-cam
-           :printer_id printer-id
+           :printer-id printer-id
            :timestamp (-> cam :timestamp .toString)
            :data (:data cam)}]
     (broadcast store (constantly m))))
 
-; TODO broadcast-printers
+(defn broadcast-printer! [store printer]
+  (let [m {:type :new-printer
+           :printer-id (-> printer :id)
+           :timestamp (-> printer :timestamp .toString)
+           :data printer}]
+    (broadcast store (constantly m))))

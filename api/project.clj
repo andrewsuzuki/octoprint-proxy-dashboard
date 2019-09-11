@@ -9,7 +9,10 @@
                  [cheshire "5.9.0"]
                  [org.clojure/core.async "0.4.500"]
                  [clj-http "3.10.0"]
-                 [clj-time "0.15.2"]]
+                 [clj-time "0.15.2"]
+                 [aleph "0.4.6"]
+                 [manifold "0.1.8"]
+                 [lambdaisland/uri "1.1.0"]]
   :main api.main
   :profiles
   {:uberjar {:aot :all}

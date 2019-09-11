@@ -5,15 +5,20 @@
             [org.httpkit.server :refer [with-channel on-close send! on-receive]]
             [api.broadcast :as broadcast]
             [api.cam :as cam]
+            [api.octoprint :as octoprint]
             [api.utils :refer [json-response]]))
 
 (defn hydrate-handler
   "hydrate new client with current state"
   [req]
-  ;; TODO include printer state
-  (let [m {:cams @cam/cams
-           :printers []}]
-    (json-response m)))
+  (letfn [(stringify-timestamps [els]
+            (map #(update % :timestamp str) els))]
+    (let [m {:cams (stringify-timestamps @cam/cams)
+             :printers (-> @octoprint/printers
+                           vals
+                           (or [])
+                           (stringify-timestamps))}]
+      (json-response m))))
 
 (defn subscribe-handler
   "stream (websocket or http long-poll) updates to client"
@@ -22,9 +27,7 @@
     (broadcast/add broadcast/channel-store ch {})
     (on-close ch (fn [status]
                    (broadcast/end broadcast/channel-store ch)))
-    (on-receive ch (fn [data]
-                     ; do nothing
-                     nil))))
+    (on-receive ch (fn [data])))) ; do nothing (websocket receive)
 
 (defroutes app-routes
   (GET "/" [] "octoprint api proxy")

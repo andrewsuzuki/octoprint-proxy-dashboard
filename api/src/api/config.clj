@@ -15,7 +15,7 @@
 
 (defonce conf (atom default-config))
 
-(defn read-config [file]
+(defn read-config! [file]
   (let [raw (slurp file)
         c (-> raw
               (cheshire/parse-string true)
