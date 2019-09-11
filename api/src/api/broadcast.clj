@@ -1,6 +1,7 @@
 (ns api.broadcast
   (:require [cheshire.core :as cheshire]
-            [org.httpkit.server :refer [send! websocket?]]))
+            [org.httpkit.server :refer [send! websocket?]]
+            [api.utils :refer [json-response]]))
 
 ;; channel store
 
@@ -22,11 +23,7 @@
       (let [body (cheshire/generate-string (f ch attach))]
         (if (websocket? ch)
           (send! ch body false)
-          (send! ch {:status 200
-                     :headers {"Content-Type"
-                               "application/json; charset=utf-8"}
-                     :body body}
-                 true))))))
+          (send! ch (json-response body) true))))))
 
 (defonce channel-store
   (MemoryChannelStore. (atom {})))
