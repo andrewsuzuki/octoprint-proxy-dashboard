@@ -5,9 +5,17 @@
             [manifold.stream :as stream]
             [cheshire.core :as cheshire]
             [clojure.set :refer [rename-keys]]
+            [clojure.string :as string]
             [lambdaisland.uri :as uri]))
 
-;; Printer state:
+;; TODO handle end of slicing (sends SlicingDone event, but prob don't rely on that)
+;; NOTE: it DOES continue to send current messages throughout slicing.
+;; If slicing progress hits 100, clear :slicer state
+;; Handling missed message: perhaps save the time of the last slicingProgress message
+;; if it was more than 60 seconds ago, clear :slicer state.
+;; end TODO
+
+;; Printer state shape:
 ;; {:id string (uuid)
 ;;  :display-name string
 ;;  :status #{:connected :disconnected :unreachable (connection attempted but failed) :incompatible (incompatible version)}
@@ -27,7 +35,11 @@
 ;;                       :seconds-left int}
 ;;            :current-z float
 ;;            :offsets TODO 
-;;            :temps TODO 
+;;            :temps [{:name string
+;;                     :actual float|null
+;;                     :target float|null
+;;                     :offset float|null}
+;;                   ...] 
 ;;            }
 ;;  :slicer {:source-path string
 ;;           :progress float}}
@@ -51,8 +63,30 @@
     :connection nil :general nil :slicer nil}))
 
 (defn compatible-version? [version]
-  ; TODO parse
+  ; TODO parse (octopi3 is on 1.3.11, for reference)
   true)
+
+(defn select-keys-default
+  "select-keys, but if keys don't exist,
+  include in m with default value"
+  [m default keys]
+  (reduce #(assoc %1 %2 (get m %2 default)) {} keys))
+
+(defn derive-temps
+  "parse temps from octoprint"
+  [points]
+  ; get latest data point (the last in the list, if not empty)
+  (when-let [latest (last points)]
+    (reduce-kv (fn [acc k v]
+                 (if (or (= k :bed)
+                         (-> k name (string/starts-with? "tool")))
+                   (conj acc
+                         (-> v
+                             (select-keys-default nil [:actual :target :offset])
+                             (assoc :name k)))
+                   acc))
+               (list)
+               latest)))
 
 (defn derive-general
   "helper for generating :general state from
@@ -64,18 +98,18 @@
                       :flags
                       (rename-keys {:closedOrError :closed-or-error
                                     :sdReady :sd-ready})
-                      (select-keys [:operational :paused :printing :pausing
-                                    :cancelling :sd-ready :error :ready :closed-or-error]))}
+                      (select-keys-default false [:operational :paused :printing :pausing
+                                                  :cancelling :sd-ready :error :ready :closed-or-error]))}
    :job {:file {:name (-> p :job :file :name)}
          :times {:estimated (-> p :job :estimatedPrintTime)
                  :last (-> p :job :lastPrintTime)}
-         :filament (-> p :job :filament (select-keys [:length :volume]))}
+         :filament (-> p :job :filament (select-keys-default nil [:length :volume]))}
    :progress {:percent (-> p :progress :completion)
               :seconds-spent (-> p :progress :printTime)
               :seconds-left (-> p :progress :printTimeLeft)}
    :current-z (-> p :currentZ)
    :offsets nil ; TODO offsets
-   :temps nil}) ; TODO temps
+   :temps (-> p :temps derive-temps)})
 
 (defn transform-payload
   "Transform an Octoprint Push API update payload
@@ -130,13 +164,18 @@
     (callback (get @printers printer-id))))
 
 (defn derive-uri
-  "Derive Octoprint Push API uri string
-  from configured base server address."
+  "Derive Octoprint Push API uri string from the configured base server address.
+  Uses SockJS's raw websocket feature, since there isn't a clojure/java SockJS client:
+  https://github.com/sockjs/sockjs-client#connecting-to-sockjs-without-the-client"
   [address]
-  (-> (uri/uri address) ; parse address string
-      (assoc :scheme "ws") ; change scheme from http[s] to ws
-      (uri/join "/sockjs") ; append sockjs to path
-      (str)))
+  (let [parsed (uri/uri address)]
+    (-> parsed
+        (assoc :scheme (case (:scheme parsed) ; change scheme to ws[s]
+                         "http" "ws"
+                         "https" "wss"
+                         (throw (Exception. "invalid octoprint address"))))
+        (uri/join "/sockjs/websocket") ; append sockjs/websocket to path
+        (str))))
 
 (defn connect!
   "connect to octoprint push api websocket using aleph,
@@ -147,7 +186,8 @@
   ; attempt connection to websocket
   ; TODO X-Api-Key header needed?
   (when-let [conn (try
-                    @(http/websocket-client (derive-uri address))
+                    @(http/websocket-client (derive-uri address)
+                                            {:max-frame-payload 2621440}) ; increase to 2.5MB; 65536 wasn't enough
                     (catch Exception e
                       ; couldn't connect; mark as :unreachable
                       (swap! printers assoc printer-id (init-printer-state printer-id display-name :unreachable))
@@ -155,10 +195,11 @@
                       ; return nil (don't execute below body)
                       nil))]
     (stream/on-closed conn (fn [] (on-closed printer-id callback)))
-    (stream/consume conn (fn [message]
-                           (on-message printer-id
-                                       (cheshire/parse-string message true)
-                                       callback)))
+    (stream/consume (fn [message]
+                      (on-message printer-id
+                                  (cheshire/parse-string message true)
+                                  callback))
+                    conn)
     (swap! connections assoc printer-id conn)))
 
 ;; TODO auto-connect (proxy to octoprint)

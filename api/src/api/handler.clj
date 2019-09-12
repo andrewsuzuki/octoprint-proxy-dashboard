@@ -12,7 +12,7 @@
   "hydrate new client with current state"
   [req]
   (letfn [(stringify-timestamps [els]
-            (map #(update % :timestamp str) els))]
+            (map broadcast/stringify-timestamp-m els))]
     (let [m {:cams (stringify-timestamps @cam/cams)
              :printers (-> @octoprint/printers
                            vals

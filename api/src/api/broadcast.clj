@@ -30,16 +30,21 @@
 
 ;; specific broadcasters
 
+(defn stringify-timestamp-m [m]
+  (update m :timestamp str))
+
 (defn broadcast-cam! [store printer-id cam]
-  (let [m {:type :new-cam
+  (let [cam-final (stringify-timestamp-m cam)
+        m {:type :new-cam
            :printer-id printer-id
-           :timestamp (-> cam :timestamp .toString)
-           :data (:data cam)}]
+           :timestamp (:timestamp cam-final)
+           :data cam-final}]
     (broadcast store (constantly m))))
 
 (defn broadcast-printer! [store printer]
-  (let [m {:type :new-printer
+  (let [printer-final (stringify-timestamp-m printer)
+        m {:type :new-printer
            :printer-id (-> printer :id)
-           :timestamp (-> printer :timestamp .toString)
-           :data printer}]
+           :timestamp (:timestamp printer-final)
+           :data printer-final}]
     (broadcast store (constantly m))))
