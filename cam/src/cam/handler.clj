@@ -20,6 +20,17 @@
         (-> (response "Camera error")
             (status 500))))))
 
+(defn wrap-remaining-exceptions
+  "Unhandled exception response middleware (catch-all)"
+  [handler]
+  (fn [req]
+    (try
+      (handler req)
+      (catch Exception e
+        ; catch-all
+        (-> (response "An unknown error occurred")
+            (status 500))))))
+
 (defroutes app-routes
   (GET "/" [] (response "Camera snapshot service"))
   (GET "/snapshot" [] snapshot-handler)
@@ -28,4 +39,5 @@
 
 (def app
   (-> (routes app-routes)
-      (handler/site)))
+      (handler/site)
+      (wrap-remaining-exceptions)))

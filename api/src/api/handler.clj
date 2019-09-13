@@ -27,7 +27,15 @@
                    (broadcast/end broadcast/channel-store ch)))
     (on-receive ch (fn [data])))) ; do nothing (websocket receive)
 
-; TODO generic error handler
+(defn wrap-remaining-exceptions
+  "Unhandled exception response middleware (catch-all)"
+  [handler]
+  (fn [req]
+    (try
+      (handler req)
+      (catch Exception e
+        ; catch-all
+        (plain-response "An unknown error occurred" 500)))))
 
 (defroutes app-routes
   (GET "/" [] (plain-response "octoprint proxy service" 200))
@@ -37,4 +45,5 @@
 
 (def app
   (-> (routes app-routes)
-      (handler/site)))
+      (handler/site)
+      (wrap-remaining-exceptions)))
