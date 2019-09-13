@@ -6,15 +6,8 @@
             [cheshire.core :as cheshire]
             [clojure.set :refer [rename-keys]]
             [clojure.string :as string]
+            [clj-time.coerce :as c]
             [lambdaisland.uri :as uri]))
-
-;; TODO handle end of slicing (sends SlicingDone event, but prob don't rely on that)
-;; NOTE: it DOES continue to send current messages throughout slicing.
-;; If slicing progress hits 100, clear :slicer state
-;; Perhaps DO use the events (pretty well-defined)...see http://docs.octoprint.org/en/master/events/index.html#slicing
-;; Handling missed message: perhaps save the time of the last slicingProgress message
-;; if it was more than 60 seconds ago, clear :slicer state.
-;; end TODO
 
 ;; Printer state shape:
 ;; {:id string (uuid)
@@ -43,7 +36,9 @@
 ;;                   ...] 
 ;;            }
 ;;  :slicer {:source-path string
-;;           :progress float}}
+;;           :progress float
+;;           :last-slicing-progress int (our unix epoch timestamp, see logic in wipe-slicer-maybe)
+;;           }}
 
 ;; State
 
@@ -121,6 +116,25 @@
    :offsets nil ; TODO offsets
    :temps (-> p :temps derive-temps)})
 
+; TODO test this thoroughly at makehaven
+(defn wipe-slicer-maybe
+  [state type payload]
+  (if (case type
+        ; if slicingProgress, wipe it if it's 100
+        :slicingProgress (->> state :slicer :progress int (= 100))
+        ; if event, check if this is an event that implies no more slicingProgress messages are coming
+        :event (->> payload
+                    :type ; (the event type, not the message type)
+                    (contains? #{"SlicingDone" "SlicingCancelled" "SlicingFailed"}))
+        ; otherwise, check the state's :last-slicing-progress
+        ; and check if it was more than 120 seconds ago
+        (when-let [lsp (get-in state [:slicer :last-slicing-progress])]
+          (< 120 (- (c/to-epoch (t/now)) lsp))))
+    ; yes, wipe it
+    (dissoc state :slicer)
+    ; no, do nothing
+    state))
+
 (defn transform-payload
   "Transform an Octoprint Push API update payload
   into watered-down proxy printer state,
@@ -143,12 +157,15 @@
           (:current :history) (assoc state :general (derive-general payload))
           :slicingProgress (let [{:keys [source_path progress]} payload
                                  slicer {:source-path source_path
-                                         :progress progress}]
+                                         :progress progress
+                                         ; set unix timestamp for this slicing progress
+                                         ; and use it for later comparison (see wipe-slicer-maybe)
+                                         :last-slicing-progress (c/to-epoch (t/now))}]
                              (assoc state :slicer slicer))
           state)
         (assoc-current-timestamp)
         (assoc :status :connected) ; ensure status is marked :connected
-        )))
+        (wipe-slicer-maybe type payload))))
 
 ;; Communication
 
