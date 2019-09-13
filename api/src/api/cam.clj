@@ -2,7 +2,8 @@
   (:require [clj-http.client :as client]
             [clojure.core.async :refer [go timeout <!]]
             [clojure.string :as string]
-            [clj-time.core :as t]))
+            [clj-time.core :as t]
+            [lambdaisland.uri :as uri]))
 
 ;; in-memory store 
 
@@ -16,8 +17,9 @@
   ; TODO make sure multiple aren't fired off to the same camera (wait for last request)
   (doseq [{:keys [id cam-address]} nodes]
     (try
-      (let [{:keys [status body]} (client/get cam-address {:socket-timeout max-time
-                                                           :connection-timeout max-time})
+      (let [url (str (uri/join cam-address "/snapshot"))
+            {:keys [status body]} (client/get url {:socket-timeout max-time
+                                                   :connection-timeout max-time})
             ; light validation
             data (when (and (= 200 status)
                             (string/starts-with? body "data:image/"))

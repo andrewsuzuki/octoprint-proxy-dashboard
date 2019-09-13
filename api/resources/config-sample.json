@@ -7,7 +7,7 @@
             "octoprint_address": "http://octopi3.makehaven",
             "api_key": "J24JFJ00994",
 			"auto_connect": true,
-            "cam_address": "http://octopi.local:8020"
+            "cam_address": "http://localhost:8020"
 		}
 	]
 }

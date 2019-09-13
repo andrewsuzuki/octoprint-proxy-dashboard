@@ -3,20 +3,28 @@
             [compojure.handler :as handler]
             [compojure.route :as route]
             [cam.config :as config]
-            [cam.snapshot :as snapshot]
-            [cam.utils :refer [json-response]]))
+            [ring.util.response :refer [response status]]
+            [cam.snapshot :as snapshot]))
 
 (defn snapshot-handler
   "Take new snapshot from webcam and return as data uri image"
   [req]
-  (snapshot/camera->data-uri (config/get-config :device)))
+  (let [device (config/get-config :device)]
+    (try
+      (-> device
+          (snapshot/camera->data-uri)
+          (response))
+      (catch Exception e
+        (println "Camera snapshot exception: " (.getMessage e))
+        ; simple server error response
+        (-> (response "Camera error")
+            (status 500))))))
 
 (defroutes app-routes
-  (GET "/" [] "cam snapshot service")
+  (GET "/" [] (response "Camera snapshot service"))
   (GET "/snapshot" [] snapshot-handler)
-  (route/not-found "Not Found"))
-
-; TODO generic error handler
+  (route/not-found (-> (response "Not Found")
+                       (status 404))))
 
 (def app
   (-> (routes app-routes)

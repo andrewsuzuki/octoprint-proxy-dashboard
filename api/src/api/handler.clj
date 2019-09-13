@@ -6,18 +6,16 @@
             [api.broadcast :as broadcast]
             [api.cam :as cam]
             [api.octoprint :as octoprint]
-            [api.utils :refer [json-response]]))
+            [api.utils :refer [json-response plain-response]]))
 
 (defn hydrate-handler
   "hydrate new client with current state"
   [req]
-  (letfn [(stringify-timestamps [els]
-            (map broadcast/stringify-timestamp-m els))]
-    (let [m {:cams (stringify-timestamps @cam/cams)
-             :printers (-> @octoprint/printers
-                           vals
-                           (or [])
-                           (stringify-timestamps))}]
+  (letfn [(vals-and-stringify-timestamps [els]
+            (map broadcast/stringify-timestamp-m
+                 (or (vals els) [])))]
+    (let [m {:cams (vals-and-stringify-timestamps @cam/cams)
+             :printers (vals-and-stringify-timestamps @octoprint/printers)}]
       (json-response m))))
 
 (defn subscribe-handler
@@ -32,10 +30,10 @@
 ; TODO generic error handler
 
 (defroutes app-routes
-  (GET "/" [] "octoprint api proxy")
+  (GET "/" [] (plain-response "octoprint proxy service" 200))
   (GET "/hydrate" [] hydrate-handler)
   (GET "/subscribe" [] subscribe-handler)
-  (route/not-found "Not Found"))
+  (route/not-found (plain-response "not found" 404)))
 
 (def app
   (-> (routes app-routes)
