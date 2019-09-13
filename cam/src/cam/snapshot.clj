@@ -18,6 +18,7 @@
                     (.addOutput (.getAbsolutePath image-file))
                     (.setFormat "mjpeg")
                     (.setFrames 1)
+                    (.addExtraArgs (into-array String ["-q:v" "1"])) ; 1 is highest quality (does this work?)
                     (.done))]
     ; execute ffmpeg command
     (-> (FFmpegExecutor.)

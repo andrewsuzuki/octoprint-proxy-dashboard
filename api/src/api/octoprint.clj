@@ -63,9 +63,18 @@
     :status status
     :connection nil :general nil :slicer nil}))
 
-(defn compatible-version? [version]
-  ; TODO parse (octopi3 is on 1.3.11, for reference)
-  true)
+(defn compatible-version?
+  "Is the proxy compatible with an octoprint's version?
+  a bit primitive, and should be checked once 1.4 is released.
+  (NOTE currently developing against octoprint 1.3.11).
+  Considering >= 1.2.0 to be compatible for now (though
+  there are no promises for future versions to be compatible)."
+  [version]
+  (let [[major minor patch] (map #(Integer/parseInt %) (string/split version #"\."))]
+    (cond
+      (> 1 major) false ; 0.x.x, no
+      (= 1 major) (<= 2 minor) ; 1.x.x, make sure it's equal to or above 1.2.0
+      (< 1 major) true))) ; 2+.x.x, yes, but don't know
 
 (defn select-keys-default
   "select-keys, but if keys don't exist,
