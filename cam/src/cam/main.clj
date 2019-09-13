@@ -4,11 +4,12 @@
             [clojure.java.io :refer [resource]]
             [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
+            [cam.config :as config]
             [cam.handler :refer [app]])
   (:gen-class))
 
 (def cli-options
-  [["-d" "--device DEVICE" "Camera device"
+  [["-d" "--device DEVICE" "Camera device (e.g. /dev/video0)"
     :id :device
     :missing "Camera device is required"
     :validate [#(not (string/blank? %)) "Must not be blank"]]
@@ -54,12 +55,14 @@
   (System/exit status))
 
 (defn -main [& args]
-  (let [{:keys [exit-message ok? env port]} (validate-args args)
+  (let [{:keys [exit-message ok? env port device]} (validate-args args)
         dev? (= env :dev)]
     (when exit-message
       (exit! (if ok? 0 1) exit-message))
     (when dev?
       (println "--in development mode--"))
+    ; set config :device
+    (config/set-config :device device)
     ; start server
     (let [reloaded-handler (if dev?
                              (reload/wrap-reload #'app) ;; only reload when dev

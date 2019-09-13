@@ -29,6 +29,8 @@
                    (broadcast/end broadcast/channel-store ch)))
     (on-receive ch (fn [data])))) ; do nothing (websocket receive)
 
+; TODO generic error handler
+
 (defroutes app-routes
   (GET "/" [] "octoprint api proxy")
   (GET "/hydrate" [] hydrate-handler)

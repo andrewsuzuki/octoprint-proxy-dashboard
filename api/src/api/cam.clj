@@ -13,6 +13,7 @@
   collection of maps with keys :id and :cam-address."
   [max-time nodes callback]
   ; TODO make this async / make requests in parallel (using aleph instead of clj-http?)
+  ; TODO make sure multiple aren't fired off to the same camera (wait for last request)
   (doseq [{:keys [id cam-address]} nodes]
     (try
       (let [{:keys [status body]} (client/get cam-address {:socket-timeout max-time

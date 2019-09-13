@@ -7,7 +7,8 @@
                  [ring/ring-core "1.7.1"]
                  [http-kit "2.3.0"]
                  [cheshire "5.9.0"]
-                 [clj-time "0.15.2"]]
+                 [clj-time "0.15.2"]
+                 [net.bramp.ffmpeg/ffmpeg "0.6.2"]]
   :main cam.main
   :profiles
   {:uberjar {:aot :all}
