@@ -11,6 +11,7 @@
 ;; TODO handle end of slicing (sends SlicingDone event, but prob don't rely on that)
 ;; NOTE: it DOES continue to send current messages throughout slicing.
 ;; If slicing progress hits 100, clear :slicer state
+;; Perhaps DO use the events (pretty well-defined)...see http://docs.octoprint.org/en/master/events/index.html#slicing
 ;; Handling missed message: perhaps save the time of the last slicingProgress message
 ;; if it was more than 60 seconds ago, clear :slicer state.
 ;; end TODO

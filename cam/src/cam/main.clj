@@ -1,31 +1,31 @@
-(ns api.main
+(ns cam.main
   (:use [org.httpkit.server :only [run-server]])
   (:require [ring.middleware.reload :as reload]
             [clojure.java.io :refer [resource]]
             [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
-            [api.config :refer [read-config! get-config]]
-            [api.handler :refer [app]]
-            [api.cam :as cam]
-            [api.octoprint :as octoprint]
-            [api.broadcast :as broadcast])
+            [cam.handler :refer [app]])
   (:gen-class))
 
 (def cli-options
-  [["-c" "--config CONFIG_FILE" "Path to config file"
-    :id :config
-    :missing "Config file is required"
+  [["-d" "--device DEVICE" "Camera device"
+    :id :device
+    :missing "Camera device is required"
     :validate [#(not (string/blank? %)) "Must not be blank"]]
+   ["-p" "--port PORT" "Port number for service"
+    :id :port
+    :default 8020
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    ["-e" "--env ENV" "Environment (dev or prod)"
     :id :env
     :default "prod" ; => :prod
-    :missing "Env is required"
     :parse-fn keyword
     :validate [#(contains? #{:dev :prod} %) "Must be dev or prod"]]
    ["-h" "--help"]])
 
 (defn usage [options-summary]
-  (->> ["octoprint proxy"
+  (->> ["cam snapshot service"
         ""
         "Options:"
         options-summary]
@@ -54,36 +54,15 @@
   (System/exit status))
 
 (defn -main [& args]
-  (let [{:keys [exit-message ok? env config]} (validate-args args)
+  (let [{:keys [exit-message ok? env port]} (validate-args args)
         dev? (= env :dev)]
     (when exit-message
       (exit! (if ok? 0 1) exit-message))
     (when dev?
       (println "--in development mode--"))
-    ; read config from config file
-    (read-config! config)
     ; start server
     (let [reloaded-handler (if dev?
                              (reload/wrap-reload #'app) ;; only reload when dev
-                             app)
-          port (get-config :port)]
+                             app)]
       (run-server reloaded-handler {:port port})
-      (println (str "started api on port " port)))
-    ; start cam polling
-    (cam/poll-start! (get-config :cam-polling-interval)
-                     ;; printers
-                     (->> (get-config :printers)
-                          (filter :cam-address)
-                          (map (fn [printer]
-                                 (select-keys printer [:id :cam-address]))))
-                     ;; broadcast callback
-                     (fn [id cam]
-                       (broadcast/broadcast-cam! broadcast/channel-store id cam)))
-    ; connect to octoprints
-    (let [printer-configs (->> (get-config :printers)
-                               (map (fn [printer]
-                                      (select-keys printer [:id :display-name :octoprint-address]))))
-          callback (fn [printer]
-                     (broadcast/broadcast-printer! broadcast/channel-store printer))]
-      (doseq [{:keys [id display-name octoprint-address]} printer-configs]
-        (octoprint/connect! id display-name octoprint-address callback)))))
+      (println (str "started cam service on port " port)))))
