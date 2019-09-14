@@ -15,3 +15,7 @@
       response
       (status s)
       (header "Content-Type" "text/plain; charset=utf-8")))
+
+(defn with-allow-origin
+  [res origin]
+  (header res "Access-Control-Allow-Origin" origin))

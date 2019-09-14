@@ -1,49 +1,142 @@
 import React from "react";
+import omit from "lodash.omit";
+
 import "./App.css";
 import Printer from "./Printer";
 
-const updateIntervalSeconds = 10;
+const reconnectTimeout = 2000; // 2 seconds
 
-const endpoint =
-  process.env.REACT_APP_SPAP_ENDPOINT || "http://localhost:8080/api";
+const endpoint = process.env.REACT_APP_SPAP_ENDPOINT || "http://localhost:8080";
 
 let nextLoaderId = 0;
 
 export default class App extends React.Component {
   state = {
-    printers: null,
-    loaders: []
+    printers: [],
+    cams: {},
+    loaders: [],
+    connectionErrorString: null,
+    connection: null
   };
 
   componentDidMount() {
-    this.startPolling();
+    this.start();
   }
 
   componentWillUnmount() {
-    clearInterval(this.poller);
+    this.reset();
   }
 
-  startPolling = () => {
-    this.poller = setInterval(this.poll, updateIntervalSeconds * 1000);
-    this.poll();
+  reset = () => {
+    // close connection if it's open
+    const { connection } = this.state;
+    if (
+      connection &&
+      [WebSocket.CONNECTING, WebSocket.OPEN].includes(connection.readyState)
+    ) {
+      this.state.connection.close();
+    }
+
+    this.setState({
+      printers: [],
+      cams: {},
+      loaders: [],
+      connectionErrorString: null,
+      connection: null
+    });
   };
 
-  poll = async () => {
-    const printers = await this.fetch();
-    this.setState({ printers });
+  onNoConnection = () => {
+    // show user error
+    this.setState({
+      connectionErrorString: "Couldn't reach server, attempting reconnection..."
+    });
+    // try again in two seconds
+    setTimeout(this.start, reconnectTimeout);
   };
 
-  fetch = async () => {
+  onMessage = message => {
+    const json = JSON.parse(message.data);
+
+    switch (json.type) {
+      case "new-printer":
+        this.setState({
+          printers: this.state.printers.map(printer => {
+            if (printer.id === json["printer-id"]) {
+              return json.data;
+            } else {
+              return printer;
+            }
+          })
+        });
+        break;
+      case "new-cam":
+        this.setState({
+          cams: {
+            ...this.state.cams,
+            [json["printer-id"]]: json.data
+          }
+        });
+        break;
+      case "remove-cam":
+        this.setState({
+          cams: omit(this.state.cams, json["printer-id"])
+        });
+        break;
+      default:
+        // do nothing
+        console.warn(`Unrecognized message type from server (${json.type})`);
+    }
+  };
+
+  start = async () => {
+    this.reset();
+
+    // Hydrate
+    const isHydrated = await this.hydrate();
+
+    if (!isHydrated) {
+      this.onNoConnection();
+      return;
+    }
+
+    // connect to websocket at /subscribe
+    const loaderId = this.startLoader();
+    const wsUrl = new URL(endpoint);
+    wsUrl.protocol = wsUrl.protocol === "https" ? "wss" : "ws";
+    const ws = new WebSocket(`${wsUrl}subscribe`);
+    this.setState({
+      connection: ws
+    });
+    ws.onopen = () => {
+      this.stopLoader(loaderId);
+    };
+    ws.onerror = () => {
+      this.stopLoader(loaderId);
+    };
+    ws.onclose = this.onNoConnection;
+    ws.onmessage = this.onMessage;
+  };
+
+  hydrate = async () => {
     const loaderId = this.startLoader();
 
     try {
-      const response = await fetch(endpoint);
+      const response = await fetch(`${new URL(endpoint)}hydrate`);
       const json = await response.json();
       this.stopLoader(loaderId);
-      return json;
+
+      const { printers, cams } = json;
+
+      this.setState({
+        printers: printers,
+        cams: cams
+      });
+
+      return true;
     } catch (e) {
       this.stopLoader(loaderId);
-      return null;
+      return false;
     }
   };
 
@@ -64,7 +157,7 @@ export default class App extends React.Component {
   };
 
   render() {
-    const { loaders, printers } = this.state;
+    const { loaders, printers, cams, connectionErrorString } = this.state;
 
     const isLoading = loaders.length > 0;
 
@@ -81,33 +174,32 @@ export default class App extends React.Component {
             </p>
           ) : (
             <p>
-              <small>
-                Updates automatically every {updateIntervalSeconds} seconds
-              </small>
+              <small>Updates automatically</small>
             </p>
           )}
         </div>
         <div className="App-content">
-          {printers ? (
+          {connectionErrorString ? (
+            <p>{connectionErrorString}</p>
+          ) : isLoading ? null : (
             <div className="grid">
               {printers.map(printer => (
-                <div className="col-md-6 col-xlg-4" key={printer.name}>
-                  <Printer printer={printer} />
+                <div className="col-md-6 col-xlg-4" key={printer.id}>
+                  <Printer printer={printer} cam={cams[printer.id]} />
                 </div>
               ))}
             </div>
-          ) : isLoading ? null : (
-            <p>Service not available</p>
           )}
         </div>
         <div className="App-footer">
-          &copy;{new Date().getFullYear()} Andrew Suzuki &middot;{" "}
+          &copy;{new Date().getFullYear()} Andrew Suzuki &middot; Made for
+          MakeHaven &middot;{" "}
           <a
             href="https://github.com/andrewsuzuki/octoprint-spap"
             title="source on github"
           >
             source
-          </a>
+          </a>{" "}
         </div>
       </div>
     );

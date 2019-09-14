@@ -6,7 +6,7 @@
             [api.broadcast :as broadcast]
             [api.cam :as cam]
             [api.octoprint :as octoprint]
-            [api.utils :refer [json-response plain-response]]))
+            [api.utils :refer [json-response plain-response with-allow-origin]]))
 
 (defn hydrate-handler
   "hydrate new client with current state"
@@ -14,7 +14,7 @@
   (letfn [(vals-and-stringify-timestamps [els]
             (map broadcast/stringify-timestamp-m
                  (or (vals els) [])))]
-    (let [m {:cams (vals-and-stringify-timestamps @cam/cams)
+    (let [m {:cams (into {} (for [[k v] @cam/cams] [k (broadcast/stringify-timestamp-m v)]))
              :printers (vals-and-stringify-timestamps @octoprint/printers)}]
       (json-response m))))
 
@@ -37,6 +37,11 @@
         ; catch-all
         (plain-response "An unknown error occurred" 500)))))
 
+(defn wrap-cors
+  [handler]
+  (fn [req]
+    (with-allow-origin (handler req) "*")))
+
 (defroutes app-routes
   (GET "/" [] (plain-response "octoprint proxy service" 200))
   (GET "/hydrate" [] hydrate-handler)
@@ -46,4 +51,5 @@
 (def app
   (-> (routes app-routes)
       (handler/site)
-      (wrap-remaining-exceptions)))
+      (wrap-remaining-exceptions)
+      (wrap-cors)))

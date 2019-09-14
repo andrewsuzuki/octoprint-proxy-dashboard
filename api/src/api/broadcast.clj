@@ -34,12 +34,16 @@
   (update m :timestamp str))
 
 (defn broadcast-cam! [store printer-id cam]
-  (let [cam-final (stringify-timestamp-m cam)
-        m {:type :new-cam
-           :printer-id printer-id
-           :timestamp (:timestamp cam-final)
-           :data cam-final}]
-    (broadcast store (constantly m))))
+  (if cam
+    (let [cam-final (stringify-timestamp-m cam)
+          m {:type :new-cam
+             :printer-id printer-id
+             :timestamp (:timestamp cam-final)
+             :data cam-final}]
+      (broadcast store (constantly m)))
+    (let [m {:type :remove-cam
+             :printer-id printer-id}]
+      (broadcast store (constantly m)))))
 
 (defn broadcast-printer! [store printer]
   (let [printer-final (stringify-timestamp-m printer)

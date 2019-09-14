@@ -5,6 +5,8 @@
            (java.util UUID Base64)
            (java.nio.file Files)))
 
+; TODO multiple passes for higher quality
+
 (defn camera->data-uri
   "open video device and take single frame, returning
   a string data uri of the image (base-64 jpeg)"

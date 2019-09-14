@@ -49,4 +49,6 @@
         (catch Exception e
           (println (str "Couldn't poll cam " cam-address ": " (.getMessage e)))
           ; remove
-          (swap! cams dissoc id))))))
+          (swap! cams dissoc id)
+          ; broadcast
+          (callback id nil))))))

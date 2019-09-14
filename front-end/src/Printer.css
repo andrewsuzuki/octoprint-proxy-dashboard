@@ -14,6 +14,24 @@
     margin-bottom: 0;
 }
 
+.Printer-cam {
+    position: relative;
+    margin-bottom: 1em;
+}
+
+.Printer-cam img {
+    max-width: 100%;
+}
+
+.Printer-cam span {
+    position: absolute;
+    bottom: 0.7em;
+    right: 0.5em;
+    font-size: 0.6em;
+    font-family: 'Courier New', Courier, monospace;
+    color: yellow;
+}
+
 .Printer-name {
     font-size: 1.5em;
 }
