@@ -1,16 +1,17 @@
 {
 	"port": 8080,
-	"cam_polling_interval": 5000,
+	"cam-polling-interval": 5000,
+	"octoprint-reconnect-interval": 5000,
 	"printers": [
 		{
-			"display_name": "Octoprint 3",
-            "octoprint_address": "http://octopi3.makehaven",
-            "cam_address": "http://localhost:8020"
+			"display-name": "Octoprint 3",
+            "octoprint-address": "http://octopi3.makehaven",
+            "cam-address": "http://localhost:8020"
 		},
 		{
-			"display_name": "Octoprint 7",
-            "octoprint_address": "http://octopi7.makehaven",
-            "cam_address": "http://localhost:8021"
+			"display-name": "Octoprint 7",
+            "octoprint-address": "http://octopi7.makehaven",
+            "cam-address": "http://localhost:8021"
 		}
 	]
 }

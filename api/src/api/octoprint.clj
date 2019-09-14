@@ -3,6 +3,7 @@
   (:require [clj-time.core :as t]
             [aleph.http :as http]
             [manifold.stream :as stream]
+            [clojure.core.async :as a]
             [cheshire.core :as cheshire]
             [clojure.set :refer [rename-keys]]
             [clojure.string :as string]
@@ -43,7 +44,6 @@
 ;; State
 
 (defonce printers (atom {}))
-(defonce connections (atom {}))
 
 ;; Octoprint message types and payloads http://docs.octoprint.org/en/master/api/push.html
 ;; We listen to `connected`, `current`/`history`, and `slicingProgress`.
@@ -174,31 +174,6 @@
 
 ;; Communication
 
-(defn on-closed
-  "Closed handler for websocket connections"
-  [printer-id callback]
-  ; remove connection
-  (swap! connections dissoc printer-id)
-  ; clean (re-initialize) printer state
-  (swap! printers update printer-id
-         (fn [state]
-           (init-printer-state (:id state) (:display-name state) :disconnected)))
-  ; callback
-  (callback (get @printers printer-id)))
-
-(defn on-message
-  "Handler for new websocket messages"
-  [printer-id body callback]
-  (let [current (get @printers printer-id)
-        ; transform message body given current state. this uses
-        ; reduce to allow for multiple keys, but the message body map
-        ; should actually just have a single entry (<type> => payload).
-        transformed (reduce-kv transform-payload current body)]
-    ; update
-    (swap! printers assoc printer-id transformed)
-    ; callback
-    (callback (get @printers printer-id))))
-
 (defn derive-uri
   "Derive Octoprint Push API uri string from the configured base server address.
   Uses SockJS's raw websocket feature, since there isn't a clojure/java SockJS client:
@@ -213,30 +188,66 @@
         (uri/join "/sockjs/websocket") ; append sockjs/websocket to path
         (str))))
 
-(defn connect!
+(defn connect-once!
   "connect to octoprint push api websocket using aleph,
-  setting it up to consume new messages."
-  [printer-id display-name address callback]
-  ; initialize printer state
-  (swap! printers assoc printer-id (init-printer-state printer-id display-name :disconnected))
-  ; attempt connection to websocket
-  (when-let [conn (try
+  setting it up to consume new messages.
+  callback function is called on close or new message
+  with current printer state."
+  [printer-id display-name address callback retry]
+  (letfn [(callback-with-swap-printers!
+            [f & args]
+            (callback (apply swap! printers f printer-id args)))
+          (re-init-and-retry!
+            [status]
+            (if (= :disconnected status)
+              (println (str "Disconnected from octoprint " address))
+              (println (str "Couldn't reach octoprint " address)))
+            ; clean (re-initialize) printer state
+            (callback-with-swap-printers!
+             assoc
+             (init-printer-state printer-id display-name status))
+            ; retry connection
+            (retry))
+          (on-closed
+            []
+            (re-init-and-retry! :disconnected))
+          (on-message
+            [message]
+            (let [body (cheshire/parse-string message true)]
+              (callback-with-swap-printers! update #(reduce-kv transform-payload % body))))]
+    ; initialize printer state
+    (callback-with-swap-printers! assoc (init-printer-state printer-id display-name :disconnected))
+    ; attempt connection to websocket
+    (if-let [conn (try
                     @(http/websocket-client (derive-uri address)
                                             {:max-frame-payload 2621440}) ; increase to 2.5MB; 65536 wasn't enough
                     (catch Exception e
-                      ; couldn't connect; mark as :unreachable
-                      (swap! printers assoc printer-id (init-printer-state printer-id display-name :unreachable))
-                      (println (str "Couldn't reach octoprint " address))
-                      ; return nil (don't execute below body)
+                      ; return nil (retry below)
                       nil))]
-    (stream/on-closed conn (fn []
-                             (on-closed printer-id callback)))
-    (stream/consume (fn [message]
-                      (on-message printer-id
-                                  (cheshire/parse-string message true)
-                                  callback))
-                    conn)
-    (swap! connections assoc printer-id conn)))
+      (do
+        (stream/on-closed conn on-closed)
+        (stream/consume on-message conn))
+      ; no conn, so retry
+      (re-init-and-retry! :unreachable))))
 
-;; TODO auto-connect (proxy to octoprint)
-;; => on initial connection error, or on closed, attempt new connection every n seconds
+(defn connect!
+  "connect-once!, but if it fails or is closed, try to
+  connect again after a specified time interval (ms)."
+  [ms printer-id display-name address callback]
+  (let [; channel with sliding buffer of 1 to ensure multiple
+        ; retries are never sent off for the same
+        ; connection failure of this printer
+        needs-retry? (a/chan (a/sliding-buffer 1))
+        retry (fn []
+                (a/put! needs-retry? true))]
+    (a/go-loop []
+      (when (a/<! needs-retry?)
+        (try
+          (connect-once! printer-id display-name address callback retry)
+          (catch Exception e
+            ; catch-all
+            (retry))))
+      (a/<! (a/timeout ms))
+      (recur))
+    ; begin
+    (a/put! needs-retry? true)))

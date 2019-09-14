@@ -1,46 +1,44 @@
 (ns api.config
   (:require [cheshire.core :as cheshire]
-            [clojure.string :as string]
-            [clojure.set :refer [rename-keys]]))
+            [clojure.string :as string]))
 
 (def default-config
   {:port 8080
    :cam-polling-interval 5000
+   :octoprint-reconnect-interval 5000
    :printers []})
-
-(def default-printer
-  {:api-key nil
-   :auto-connect true
-   :cam-address nil})
 
 (defonce conf (atom default-config))
 
 (defn read-config! [file]
-  (let [raw (slurp file)
-        c (-> raw
+  (let [p (-> (slurp file)
               (cheshire/parse-string true)
-              (rename-keys {:cam_polling_interval :cam-polling-interval})
               (update :printers (fn [printers]
                                   (map
                                    (fn [printer]
-                                     (let [rn (rename-keys printer {:display_name :display-name
-                                                                    :octoprint_address :octoprint-address
-                                                                    :api_key :api-key
-                                                                    :auto_connect :auto-connect
-                                                                    :cam_address :cam-address})
-                                           merged (merge default-printer rn)]
-                                       (when-not (and (every? #(contains? merged %) #{:display-name :octoprint-address :api-key :auto-connect :cam-address})
-                                                      (every? #(not (string/blank? (% merged))) #{:display-name :octoprint-address})
-                                                      (every? #(or (nil? (% merged)) (not (string/blank? (% merged)))) #{:api-key :cam-address})
-                                                      (every? #(boolean? (% merged)) #{:auto-connect}))
-                                         (throw (Exception. (str "bad printer config (" (:display-name merged) ")"))))
-                                       (assoc merged :id (.toString (java.util.UUID/randomUUID)))))
-                                   printers))))]
-    (when-not (and (-> c :port int?)
-                   (-> c :cam-polling-interval int?)
-                   (-> c :printers seq?))
-      (throw (Exception. "bad general config")))
-    (swap! conf (fn [_] (merge default-config c)))))
+                                     ; light validation
+                                     (assert (every? #(and (contains? printer %) (not (string/blank? (% printer))))
+                                                     #{:display-name :octoprint-address})
+                                             "a printer config is missing display-name and/or octoprint-address")
+                                     (assert (or (nil? (:cam-address printer))
+                                                 (not (string/blank? (:cam-address printer))))
+                                             "a printer config has a blank cam-address, either omit or fill it in")
+                                     ; assoc unique id
+                                     (assoc printer :id (.toString (java.util.UUID/randomUUID))))
+                                   printers))))
+        c (merge default-config p)]
+    ; light validation
+    (let [{:keys [port cam-polling-interval octoprint-reconnect-interval printers]} c]
+      (assert (and (int? port) (pos? port))
+              "port must be positive integer")
+      (assert (and (int? cam-polling-interval) (<= 2000 cam-polling-interval))
+              "cam-polling-interval must be integer greater or equal to 2000")
+      (assert (and (int? octoprint-reconnect-interval) (<= 1000 octoprint-reconnect-interval))
+              "octoprint-reconnect-interval must be integer greater or equal to 1000")
+      (assert (seq printers)
+              "printers array must not be empty"))
+    ; swap into conf
+    (swap! conf (constantly c))))
 
 (defn get-config [k]
   (get @conf k))

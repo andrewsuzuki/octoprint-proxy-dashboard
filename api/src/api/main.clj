@@ -61,7 +61,10 @@
     (when dev?
       (println "--in development mode--"))
     ; read config from config file
-    (read-config! config)
+    (try
+      (read-config! config)
+      (catch Throwable e
+        (exit! 1 (str "Error reading config: " (.getMessage e)))))
     ; start server
     (let [reloaded-handler (if dev?
                              (reload/wrap-reload #'app) ;; only reload when dev
@@ -86,4 +89,8 @@
           callback (fn [printer]
                      (broadcast/broadcast-printer! broadcast/channel-store printer))]
       (doseq [{:keys [id display-name octoprint-address]} printer-configs]
-        (octoprint/connect! id display-name octoprint-address callback)))))
+        (octoprint/connect! (get-config :octoprint-reconnect-interval)
+                            id
+                            display-name
+                            octoprint-address
+                            callback)))))
