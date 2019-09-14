@@ -211,17 +211,17 @@
   ; initialize printer state
   (swap! printers assoc printer-id (init-printer-state printer-id display-name :disconnected))
   ; attempt connection to websocket
-  ; TODO X-Api-Key header needed?
   (when-let [conn (try
                     @(http/websocket-client (derive-uri address)
                                             {:max-frame-payload 2621440}) ; increase to 2.5MB; 65536 wasn't enough
                     (catch Exception e
                       ; couldn't connect; mark as :unreachable
                       (swap! printers assoc printer-id (init-printer-state printer-id display-name :unreachable))
-                      (println (str "Couldn't reach Octoprint " address))
+                      (println (str "Couldn't reach octoprint " address))
                       ; return nil (don't execute below body)
                       nil))]
-    (stream/on-closed conn (fn [] (on-closed printer-id callback)))
+    (stream/on-closed conn (fn []
+                             (on-closed printer-id callback)))
     (stream/consume (fn [message]
                       (on-message printer-id
                                   (cheshire/parse-string message true)
@@ -230,5 +230,4 @@
     (swap! connections assoc printer-id conn)))
 
 ;; TODO auto-connect (proxy to octoprint)
-
-;; TODO auto-connect (octoprint to printer)
+;; => on initial connection error, or on closed, attempt new connection every n seconds

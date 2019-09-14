@@ -3,11 +3,14 @@
 	"cam_polling_interval": 5000,
 	"printers": [
 		{
+			"display_name": "Octoprint 3",
+            "octoprint_address": "http://octopi3.makehaven",
+            "cam_address": "http://localhost:8020"
+		},
+		{
 			"display_name": "Octoprint 7",
             "octoprint_address": "http://octopi7.makehaven",
-            "api_key": "J24JFJ00994",
-			"auto_connect": true,
-            "cam_address": "http://localhost:8020"
+            "cam_address": "http://localhost:8021"
 		}
 	]
 }

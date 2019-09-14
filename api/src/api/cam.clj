@@ -1,7 +1,7 @@
 (ns api.cam
-  (:require [clj-http.client :as client]
-            [clojure.core.async :refer [go timeout <!]]
+  (:require [clojure.core.async :refer [go-loop timeout <!]]
             [clojure.string :as string]
+            [org.httpkit.client :as http]
             [clj-time.core :as t]
             [lambdaisland.uri :as uri]))
 
@@ -10,35 +10,45 @@
 (defonce cams (atom {}))
 
 (defn poll!
-  "poll multiple cam servers, where nodes is a
-  collection of maps with keys :id and :cam-address."
+  "poll multiple cam servers asynchronously,
+  where nodes is a collection of maps with
+  keys :id and :cam-address. Call provided
+  callback with cam data map on valid response."
   [max-time nodes callback]
-  ; TODO make this async / make requests in parallel (using aleph instead of clj-http?)
-  ; TODO make sure multiple aren't fired off to the same camera (wait for last request)
-  (doseq [{:keys [id cam-address]} nodes]
-    (try
-      (let [url (str (uri/join cam-address "/snapshot"))
-            {:keys [status body]} (client/get url {:socket-timeout max-time
-                                                   :connection-timeout max-time})
-            ; light validation
-            data (when (and (= 200 status)
-                            (string/starts-with? body "data:image/"))
-                   body)
-            m {:timestamp (t/now)
-               :data data}]
-        (when-not data
-          (throw (Exception. "bad response"))) ; caught below
-        (swap! cams assoc id m)
-        (callback id m))
-      (catch Exception e
-        (println (str "Couldn't poll cam " cam-address ": " (.getMessage e)))
-        ; remove
-        (swap! cams dissoc id)))))
+  (letfn [(on-response [{:keys [status body error opts]}]
+            (let [{:keys [id cam-address]} opts] ; destruct custom state from opts
+              (if error
+                (do
+                  (println (str "Couldn't poll cam " cam-address ": " (.getMessage error)))
+                  ; remove
+                  (swap! cams dissoc id))
+                ; light verification
+                (when (and (= 200 status)
+                           (string/starts-with? body "data:image/"))
+                  ; success!
+                  (let [m {:id id
+                           :timestamp (t/now)
+                           :data body}]
+                    (swap! cams assoc id m)
+                    (callback id m))))))]
+    ; send the requests to each cam asynchronously
+    (doseq [{:keys [id cam-address]} nodes]
+      (let [url (str (uri/join cam-address "/snapshot"))]
+        (http/get url
+                  {:as :text
+                   :timeout max-time
+                   ; custom state:
+                   :id id
+                   :cam-address cam-address}
+                  on-response)))))
 
 ;; core.async scheduler
 
 (defmacro with-interval [ms & body]
-  `(go (loop [] (<! (timeout ~ms)) ~@body (recur))))
+  `(go-loop []
+     ~@body
+     (<! (timeout ~ms))
+     (recur)))
 
 (defn poll-start! [ms nodes callback]
   (println (str "started polling cams every " ms "ms"))
