@@ -26,7 +26,8 @@
         (.run))
     ; retrieve file and return data uri (base 64)
     (let [image-path (.toPath image-file)
-          content-type (Files/probeContentType image-path)
+          ; content-type (Files/probeContentType image-path) ; DOESNT WORK on alpine linux
+          content-type "image/jpeg"
           base64-string (->> image-path
                              (Files/readAllBytes)
                              (.encodeToString (Base64/getEncoder)))]
