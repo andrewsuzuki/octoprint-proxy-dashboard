@@ -1,6 +1,6 @@
 (defproject cam "0.1.0-SNAPSHOT"
-  :description "FIXME"
-  :url "http://example.com/FIXME"
+  :description "octoprint proxy cam server"
+  :url "https://github.com/andrewsuzuki/octoprint-spap"
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/tools.cli "0.4.2"]
                  [compojure "1.6.1"]
