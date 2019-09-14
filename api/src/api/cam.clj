@@ -10,37 +10,26 @@
 (defonce cams (atom {}))
 
 (defn poll!
-  "poll multiple cam servers asynchronously,
-  where nodes is a collection of maps with
-  keys :id and :cam-address. Call provided
+  "Poll a cam server asynchronously. Call provided
   callback with cam data map on valid response."
-  [max-time nodes callback]
-  (letfn [(on-response [{:keys [status body error opts]}]
-            (let [{:keys [id cam-address]} opts] ; destruct custom state from opts
-              (if error
-                (do
-                  (println (str "Couldn't poll cam " cam-address ": " (.getMessage error)))
-                  ; remove
-                  (swap! cams dissoc id))
-                ; light verification
-                (when (and (= 200 status)
-                           (string/starts-with? body "data:image/"))
-                  ; success!
-                  (let [m {:id id
-                           :timestamp (t/now)
-                           :data body}]
-                    (swap! cams assoc id m)
-                    (callback id m))))))]
-    ; send the requests to each cam asynchronously
-    (doseq [{:keys [id cam-address]} nodes]
-      (let [url (str (uri/join cam-address "/snapshot"))]
-        (http/get url
-                  {:as :text
-                   :timeout max-time
-                   ; custom state:
-                   :id id
-                   :cam-address cam-address}
-                  on-response)))))
+  [max-time printer-id cam-address callback]
+  ; send the request and defer (block)
+  (let [url (str (uri/join cam-address "/snapshot"))
+        {:keys [status body error]} @(http/get url {:as :text :timeout max-time})]
+    (if error
+      (throw error)
+      ; light verification
+      (if (and (= 200 status)
+               (string/starts-with? body "data:image/"))
+        ; success!
+        (let [m {:id printer-id
+                 :timestamp (t/now)
+                 :data body}]
+          (swap! cams assoc printer-id m)
+          (callback printer-id m))
+        (throw (Exception. (if (= 200 status)
+                             "response body was not data uri image"
+                             "response status was not 200")))))))
 
 ;; core.async scheduler
 
@@ -52,5 +41,12 @@
 
 (defn poll-start! [ms nodes callback]
   (println (str "started polling cams every " ms "ms"))
-  (with-interval ms
-    (poll! ms nodes callback)))
+  (doseq [{:keys [id cam-address]} nodes]
+    ; go loop for each cam server
+    (with-interval ms
+      (try
+        (poll! ms id cam-address callback)
+        (catch Exception e
+          (println (str "Couldn't poll cam " cam-address ": " (.getMessage e)))
+          ; remove
+          (swap! cams dissoc id))))))

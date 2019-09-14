@@ -118,6 +118,11 @@
 
 ; TODO test this thoroughly at makehaven
 (defn wipe-slicer-maybe
+  "Given printer state map and current message type and payload,
+  maybe set :slicer as nil depending on current message
+  and the :slicer's :last-slicing-progress. i.e. nil :slicer if
+  slicingProgress is 100%, this is a slicing-done/cancelled/failed event,
+  or if it's been more than 120 seconds since the last slicingProgress."
   [state type payload]
   (if (case type
         ; if slicingProgress, wipe it if it's 100
@@ -169,7 +174,9 @@
 
 ;; Communication
 
-(defn on-closed [printer-id callback]
+(defn on-closed
+  "Closed handler for websocket connections"
+  [printer-id callback]
   ; remove connection
   (swap! connections dissoc printer-id)
   ; clean (re-initialize) printer state
@@ -179,7 +186,9 @@
   ; callback
   (callback (get @printers printer-id)))
 
-(defn on-message [printer-id body callback]
+(defn on-message
+  "Handler for new websocket messages"
+  [printer-id body callback]
   (let [current (get @printers printer-id)
         ; transform message body given current state. this uses
         ; reduce to allow for multiple keys, but the message body map
