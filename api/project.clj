@@ -1,6 +1,6 @@
 (defproject api "0.1.0-SNAPSHOT"
   :description "octoprint proxy api server"
-  :url "https://github.com/andrewsuzuki/octoprint-spap"
+  :url "https://github.com/andrewsuzuki/octoprint-proxy-dashboard"
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/tools.cli "0.4.2"]
                  [compojure "1.6.1"]

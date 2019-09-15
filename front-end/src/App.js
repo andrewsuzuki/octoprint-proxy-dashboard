@@ -6,7 +6,7 @@ import Printer from "./Printer";
 
 const reconnectTimeout = 2000; // 2 seconds
 
-const endpoint = process.env.REACT_APP_SPAP_ENDPOINT || "http://localhost:8080";
+const endpoint = process.env.REACT_APP_API_BASE || "http://localhost:8080";
 
 let nextLoaderId = 0;
 
@@ -195,7 +195,7 @@ export default class App extends React.Component {
           &copy;{new Date().getFullYear()} Andrew Suzuki &middot; Made for
           MakeHaven &middot;{" "}
           <a
-            href="https://github.com/andrewsuzuki/octoprint-spap"
+            href="https://github.com/andrewsuzuki/octoprint-proxy-dashboard"
             title="source on github"
           >
             source

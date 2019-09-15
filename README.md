@@ -1,4 +1,4 @@
-# octoprint-spap
+# octoprint-proxy-dashboard
 
 Proxy server and UI for multiple Octoprints, with webcam snapshots. Made for MakeHaven.
 
