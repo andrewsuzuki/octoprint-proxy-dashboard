@@ -196,7 +196,8 @@
   [printer-id display-name address callback retry]
   (letfn [(callback-with-swap-printers!
             [f & args]
-            (callback (apply swap! printers f printer-id args)))
+            (apply swap! printers f printer-id args)
+            (callback (get @printers printer-id)))
           (re-init-and-retry!
             [status]
             (if (= :disconnected status)
@@ -250,4 +251,4 @@
       (a/<! (a/timeout ms))
       (recur))
     ; begin
-    (a/put! needs-retry? true)))
+    (retry)))

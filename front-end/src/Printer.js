@@ -87,26 +87,19 @@ function Temperatures({ temps }) {
   );
 }
 
-function formatBytes(bytes) {
-  if (bytes < 1024) return bytes + " Bytes";
-  else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + " KB";
-  else if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + " MB";
-  else return (bytes / 1073741824).toFixed(2) + " GB";
-}
-
 function File({ file }) {
-  if (!file || !file.display) {
+  if (!file || !file.name) {
     return null;
   }
 
-  const { display, size } = file;
+  const { name } = file;
 
   return (
     <p>
       <span role="img" aria-labelledby="document">
         📄
       </span>{" "}
-      <strong>{display}</strong> ({formatBytes(size)})
+      <strong>{name}</strong>
     </p>
   );
 }
@@ -126,39 +119,67 @@ function formatSeconds(seconds) {
   return result || "0";
 }
 
-function TimeEstimates({ job }) {
-  if (!job || !job.estimatedPrintTime) {
+function TimeEstimates({ times }) {
+  if (!times || (!times.estimated && !times.last)) {
     return null;
   }
 
-  const { averagePrintTime, estimatedPrintTime, lastPrintTime } = job;
+  const { estimated, last } = times;
 
   return (
     <p>
       <span role="img" aria-labelledby="hourglass">
         ⌛
       </span>{" "}
-      {averagePrintTime && (
-        <span>[{formatSeconds(averagePrintTime)} average] </span>
-      )}
-      {lastPrintTime && <span>[{formatSeconds(lastPrintTime)} last] </span>}
-      {estimatedPrintTime && (
-        <span>[{formatSeconds(estimatedPrintTime)} estimated] </span>
+      {estimated && <span>{formatSeconds(estimated)} estimated</span>}
+      {estimated && last && ", "}
+      {last && <span>{formatSeconds(last)} last print</span>}
+    </p>
+  );
+}
+
+function Filament({ filament }) {
+  if (!filament || (!filament.length && !filament.volume)) {
+    return null;
+  }
+
+  const { length, volume } = filament;
+
+  return (
+    <p>
+      <span role="img" aria-labelledby="thread">
+        🧵
+      </span>{" "}
+      {length && (
+        <span>
+          {length}mm{" "}
+          {volume && (
+            <span>
+              {" "}
+              ({volume}cm<sup>3</sup>)
+            </span>
+          )}{" "}
+          of filament
+        </span>
       )}
     </p>
   );
 }
 
 function Progress({ progress }) {
-  if (!progress || progress.completion === null) {
+  if (!progress || progress.percent === null) {
     return null;
   }
 
-  const { completion, printTime, printTimeLeft } = progress;
+  const {
+    percent,
+    "seconds-spent": secondsSpent,
+    "seconds-left": secondsLeft
+  } = progress;
 
   return (
     <p>
-      {completion === 100 ? (
+      {percent === 100 ? (
         <span role="img" aria-labelledby="success checkmark">
           ✅️
         </span>
@@ -167,13 +188,35 @@ function Progress({ progress }) {
           🖨️
         </span>
       )}{" "}
-      {completion.toFixed(0)}% printed (time printing:{" "}
-      {formatSeconds(printTime)}, time left: {formatSeconds(printTimeLeft)})
+      {percent.toFixed(0)}% printed (time printing:{" "}
+      {formatSeconds(secondsSpent)}, time left: {formatSeconds(secondsLeft)})
+    </p>
+  );
+}
+
+function Slicer({ slicer }) {
+  if (!slicer || !slicer.progress) {
+    return null;
+  }
+
+  const { "source-path": sourcePath, progress } = slicer;
+
+  return (
+    <p>
+      <span role="img" aria-labelledby="pizza slice">
+        🍕
+      </span>
+      <strong>Slicing</strong> {sourcePath && `${sourcePath} `}
+      {progress && `(${progress.toFixed(0)}%)`}
     </p>
   );
 }
 
 function Cam({ cam }) {
+  if (!cam || !cam.data) {
+    return null;
+  }
+
   const { data, timestamp } = cam;
   const niceTime = niceTimeString(timestamp);
   return (
@@ -189,21 +232,25 @@ function Printer({ printer, cam }) {
     "display-name": name,
     timestamp,
     status, // either connected, disconnected, unreachable, or incompatible
-    connection, // either null or {version: string}
     general, // either null or object
     slicer // either null or object
   } = printer;
 
   const errorString = (() => {
     if (status === "disconnected") {
-      return "Disconnected from Octoprint server, is the printer on?";
+      return "Disconnected from the Octoprint server.";
     } else if (status === "unreachable") {
-      return "Could not reach Octoprint server.";
+      return "Couldn't connect to Octoprint server, is it on?";
     } else if (status === "incompatible") {
       return "The Octoprint server is not compatible with this proxy.";
-    } else if (false) {
-      // TODO: also consider general->state.text
     }
+
+    // Take hints from state text
+    const t = get(general, "state.text");
+    if (t && t.toLowerCase().includes("error")) {
+      return t;
+    }
+
     // no error
     return null;
   })();
@@ -212,7 +259,7 @@ function Printer({ printer, cam }) {
     <div className="Printer">
       <h2
         className={classNames("Printer-name", {
-          "Printer-name-errored": errorString
+          "Printer-name-errored": !!errorString
         })}
       >
         {name}
@@ -226,13 +273,14 @@ function Printer({ printer, cam }) {
         <React.Fragment>
           <Flags flags={get(general, "state.flags")} />
           <Temperatures temps={get(general, "temps")} />
-          {/*
-          <File file={get(current_job, "job.file")} />
-          <TimeEstimates job={get(current_job, "job")} />
-          <Progress progress={get(current_job, "progress")} /> */}
+          <File file={get(general, "job.file")} />
+          <TimeEstimates times={get(general, "job.times")} />
+          <Filament filament={get(general, "job.filament")} />
+          <Progress progress={get(general, "progress")} />
+          <Slicer slicer={slicer} />
         </React.Fragment>
       )}
-      {cam && <Cam cam={cam} />}
+      <Cam cam={cam} />
     </div>
   );
 }
