@@ -5,14 +5,14 @@ name_api := api
 name_cam := cam
 name_front_end := front-end
 
-.PHONY: deploy-api deploy-cam deploy-front
+.PHONY: deploy-api deploy-api-network-host deploy-cam deploy-front-end
 
 # supply p, the host port (e.g. 8080), and c, the host absolute path to config file
 deploy-api:
 	test -n "$(p)" || exit 1; \
 	test -n "$(c)" || exit 1; \
-	docker stop $(name_api); \
-	docker rm $(name_api); \
+	docker stop $(name_api) || true; \
+	docker rm $(name_api) || true; \
 	docker build -t $(name_api) ./api && \
 	echo "BUILD SUCCEEDED, RUNNING..." && \
 	docker run --name $(name_api) \
@@ -29,8 +29,8 @@ deploy-api:
 deploy-api-network-host:
 	test -n "$(p)" || exit 1; \
 	test -n "$(c)" || exit 1; \
-	docker stop $(name_api); \
-	docker rm $(name_api); \
+	docker stop $(name_api) || true; \
+	docker rm $(name_api) || true; \
 	docker build -t $(name_api) ./api && \
 	echo "BUILD SUCCEEDED, RUNNING..." && \
 	docker run --name $(name_api) \
@@ -45,8 +45,8 @@ deploy-api-network-host:
 deploy-cam:
 	test -n "$(p)" || exit 1; \
 	test -n "$(d)" || exit 1; \
-	docker stop $(name_cam); \
-	docker rm $(name_cam); \
+	docker stop $(name_cam) || true; \
+	docker rm $(name_cam) || true; \
 	docker build -t $(name_cam) ./cam && \
 	echo "BUILD SUCCEEDED, RUNNING..." && \
 	docker run --name $(name_cam) \
@@ -61,8 +61,8 @@ deploy-cam:
 deploy-front-end:
 	test -n "$(api_base_url)" || exit 1; \
 	test -n "$(p)" || exit 1; \
-	docker stop $(name_front_end); \
-	docker rm $(name_front_end); \
+	docker stop $(name_front_end) || true; \
+	docker rm $(name_front_end) || true; \
 	docker build --build-arg api_base_url=$(api_base_url) -t $(name_front_end) ./front-end && \
 	echo "BUILD SUCCEEDED, RUNNING..." && \
 	docker run --name $(name_front_end) \
