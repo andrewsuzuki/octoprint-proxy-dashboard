@@ -1,4 +1,4 @@
-FROM clojure:lein-2.9.1-alpine
+FROM clojure:lein-2.9.1
 RUN apk add --no-cache ffmpeg
 WORKDIR /usr/src/app
 COPY project.clj /usr/src/app/
