@@ -2,7 +2,7 @@
 
 Proxy server and UI for multiple Octoprints, with webcam snapshots.
 
-Made for MakeHaven, allowing users to keep watch on their 3d prints from outside the network without the risk of exposing individual Octaprint servers to the internet.
+Made for MakeHaven, allowing users to keep watch on their 3D prints from outside the network without the risk of exposing individual Octoprint servers to the internet.
 
 Written in Clojure and Javascript.
 
@@ -22,7 +22,7 @@ Bind the directory containing your config file as a Docker volume, then point th
 ```sh
 cd api
 docker build -t api .
-docker run --rm -it --network host -v $HOME:/configs api --port 8080 --config /configs/octoprint-api-config.json
+docker run -d --restart=unless-stopped --network host -v $HOME:/configs api --port 8080 --config /configs/octoprint-api-config.json
 ```
 
 ### `cam`
@@ -32,7 +32,7 @@ Bind host DEVICE to container DEVICE, then supply DEVICE name to server. Run wit
 ```sh
 cd cam
 docker build -t cam .
-DEVICE=/dev/video0 eval 'docker run --rm -it -p 8020:8020 --device $DEVICE:$DEVICE cam --device $DEVICE'
+DEVICE=/dev/video0 eval 'docker run -d --restart=unless-stopped -p 8020:8020 --device $DEVICE:$DEVICE cam --device $DEVICE'
 ```
 
 ### `front-end`
@@ -42,7 +42,7 @@ You must supply the Docker build argument `api_base_url`, which is inlined into 
 ```sh
 cd front-end
 docker build --build-arg api_base_url=http://192.168.1.10:8080 -t front-end .
-docker run --rm -it -p 80:80 front-end
+docker run -d --restart=unless-stopped -p 80:80 front-end
 ```
 
 ## Screenshot
