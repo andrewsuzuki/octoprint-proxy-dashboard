@@ -1,13 +1,19 @@
-# Stage 0, "build-stage", based on Node.js, to build and compile the frontend
-FROM tiangolo/node-frontend:10 as build-stage
+# build using node/yarn, then serve static files with nginx
+# requires --build-arg api_base_url
+
+# build stage
+FROM node:10-alpine as build-stage
 WORKDIR /app
 COPY package*.json /app/
-RUN npm install
+COPY yarn.lock /app/
+RUN yarn
 COPY ./ /app/
-RUN npm run build
+ARG api_base_url
+RUN test -n "$api_base_url"
+ENV REACT_APP_API_BASE_URL=$api_base_url
+RUN yarn build
 
-# Stage 1, based on Nginx, to have only the compiled app, ready for production with Nginx
-FROM nginx:1.15
+# serve with nginx
+FROM nginx:1.17
 COPY --from=build-stage /app/build/ /usr/share/nginx/html
-# Copy the default nginx.conf provided by tiangolo/node-frontend
-COPY --from=build-stage /nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf

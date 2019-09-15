@@ -1,6 +1,10 @@
 # octoprint-proxy-dashboard
 
-Proxy server and UI for multiple Octoprints, with webcam snapshots. Made for MakeHaven.
+Proxy server and UI for multiple Octoprints, with webcam snapshots.
+
+Made for MakeHaven, allowing users to keep watch on their 3d prints from outside the network without the risk of exposing individual Octaprint servers to the internet.
+
+Written in Clojure and Javascript.
 
 Three services:
 * **api (clojure)** for each configured Octoprint, polls `cam` server on interval if available (for webcam snapshots), and subscribes to the Octoprint Push Update servers, broadcasting all relevant changes to clients via its own websocket server.
@@ -9,19 +13,39 @@ Three services:
 
 ## Running With Docker
 
-First, build and tag docker images (Dockerfiles located in `api` and `cam`).
+All of the Dockerfiles are compatible with `arm32/v7` (Raspberry Pi).
 
-Example run `cam`:
+### `api`
 
-`DEVICE=/dev/video0 eval 'docker run --rm -it -p 8020:8020 --device $DEVICE:$DEVICE cam --device $DEVICE'`
+Bind the directory containing your config file as a Docker volume, then point the api server to that config file (in the container). Run with `--help` to see options.
 
-(bind host DEVICE to container DEVICE, then supply DEVICE name to server)
+```sh
+cd api
+docker build -t api .
+docker run --rm -it --network host -v $HOME:/configs api --port 8080 --config /configs/octoprint-api-config.json
+```
 
-Example run `api`:
+### `cam`
 
-`docker run --rm -it --network host -v $HOME:/configs api -c /configs/octoprint-api-config.json`
+Bind host DEVICE to container DEVICE, then supply DEVICE name to server. Run with `--help` to see options.
 
-(assuming there's a file `octoprint-api-config.json` in the host's $HOME directory)
+```sh
+cd cam
+docker build -t cam .
+DEVICE=/dev/video0 eval 'docker run --rm -it -p 8020:8020 --device $DEVICE:$DEVICE cam --device $DEVICE'
+```
+
+### `front-end`
+
+You must supply the Docker build argument `api_base_url`, which is inlined into the source and points to `api`. Nginx configuration is avaiable in `nginx.conf`.
+
+```sh
+cd front-end
+docker build --build-arg api_base_url=http://192.168.1.10:8080 -t front-end .
+docker run --rm -it -p 80:80 front-end
+```
+
+## Screenshot
 
 ![octoprint proxy screenshot](screenshot.png)
 

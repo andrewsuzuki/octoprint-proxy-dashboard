@@ -6,7 +6,10 @@ import Printer from "./Printer";
 
 const reconnectTimeout = 2000; // 2 seconds
 
-const endpoint = process.env.REACT_APP_API_BASE || "http://localhost:8080";
+// api base url, without trailing slash
+const apiBase = (
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:8080"
+).replace(/\/+$/, "");
 
 let nextLoaderId = 0;
 
@@ -102,8 +105,8 @@ export default class App extends React.Component {
 
     // connect to websocket at /subscribe
     const loaderId = this.startLoader();
-    const wsUrl = new URL(endpoint);
-    wsUrl.protocol = wsUrl.protocol === "https" ? "wss" : "ws";
+    const wsUrl = new URL(apiBase);
+    wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${wsUrl}subscribe`);
     this.setState({
       connection: ws
@@ -122,7 +125,7 @@ export default class App extends React.Component {
     const loaderId = this.startLoader();
 
     try {
-      const response = await fetch(`${new URL(endpoint)}hydrate`);
+      const response = await fetch(`${new URL(apiBase)}hydrate`);
       const json = await response.json();
       this.stopLoader(loaderId);
 
