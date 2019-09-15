@@ -1,5 +1,4 @@
 {
-	"port": 8080,
 	"cam-polling-interval": 5000,
 	"octoprint-reconnect-interval": 5000,
 	"printers": [

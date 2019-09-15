@@ -12,7 +12,12 @@
   (:gen-class))
 
 (def cli-options
-  [["-c" "--config CONFIG_FILE" "Path to config file"
+  [["-p" "--port PORT" "Port number for service"
+    :id :port
+    :default 8080
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
+   ["-c" "--config CONFIG_FILE" "Path to config file"
     :id :config
     :missing "Config file is required"
     :validate [#(not (string/blank? %)) "Must not be blank"]]
@@ -54,7 +59,7 @@
   (System/exit status))
 
 (defn -main [& args]
-  (let [{:keys [exit-message ok? env config]} (validate-args args)
+  (let [{:keys [exit-message ok? env config port]} (validate-args args)
         dev? (= env :dev)]
     (when exit-message
       (exit! (if ok? 0 1) exit-message))
@@ -68,8 +73,7 @@
     ; start server
     (let [reloaded-handler (if dev?
                              (reload/wrap-reload #'app) ;; only reload when dev
-                             app)
-          port (get-config :port)]
+                             app)]
       (run-server reloaded-handler {:port port})
       (println (str "started api on port " port)))
     ; start cam polling

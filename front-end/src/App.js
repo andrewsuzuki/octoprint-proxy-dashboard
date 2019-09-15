@@ -160,7 +160,13 @@ export default class App extends React.Component {
   };
 
   render() {
-    const { loaders, printers, cams, connectionErrorString } = this.state;
+    const {
+      loaders,
+      printers,
+      cams,
+      connection,
+      connectionErrorString
+    } = this.state;
 
     const isLoading = loaders.length > 0;
 
@@ -175,11 +181,11 @@ export default class App extends React.Component {
               </span>{" "}
               Loading...
             </p>
-          ) : (
+          ) : connection ? (
             <p>
-              <small>Updates automatically</small>
+              <small>🌐 Connected (updates automatically)</small>
             </p>
-          )}
+          ) : null}
         </div>
         <div className="App-content">
           {connectionErrorString ? (

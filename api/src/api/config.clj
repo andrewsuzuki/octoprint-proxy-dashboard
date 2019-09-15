@@ -3,8 +3,7 @@
             [clojure.string :as string]))
 
 (def default-config
-  {:port 8080
-   :cam-polling-interval 5000
+  {:cam-polling-interval 5000
    :octoprint-reconnect-interval 5000
    :printers []})
 
@@ -28,9 +27,7 @@
                                    printers))))
         c (merge default-config p)]
     ; light validation
-    (let [{:keys [port cam-polling-interval octoprint-reconnect-interval printers]} c]
-      (assert (and (int? port) (pos? port))
-              "port must be positive integer")
+    (let [{:keys [cam-polling-interval octoprint-reconnect-interval printers]} c]
       (assert (and (int? cam-polling-interval) (<= 2000 cam-polling-interval))
               "cam-polling-interval must be integer greater or equal to 2000")
       (assert (and (int? octoprint-reconnect-interval) (<= 1000 octoprint-reconnect-interval))

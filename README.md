@@ -17,12 +17,23 @@ All of the Dockerfiles are compatible with `arm32/v7` (Raspberry Pi).
 
 ### `api`
 
+An example json configuration file is found at api/resources/config-sample.json. Copy it somewhere (e.g. your home directory).
+
 Bind the directory containing your config file as a Docker volume, then point the api server to that config file (in the container). Run with `--help` to see options.
 
 ```sh
 cd api
 docker build -t api .
-docker run -d --restart=unless-stopped --network host -v $HOME:/configs api --port 8080 --config /configs/octoprint-api-config.json
+docker run -d --restart=unless-stopped -p 8080:8080 -v $HOME:/configs api --port 8080 --config /configs/octoprint-api-config.json
+```
+
+One-step with Makefile (from this directory):
+
+```sh
+make deploy-api p=8080 c=$(pwd)/api/resources/config-sample.json
+# Where p is the port and c is the ABSOLUTE path to your config file
+# Wait to load, then Ctrl-C to detach from container
+# for network=host, use: make deploy-api-network-host p=8080 c=$(pwd)/api/resources/config-sample.json
 ```
 
 ### `cam`
@@ -35,6 +46,14 @@ docker build -t cam .
 DEVICE=/dev/video0 eval 'docker run -d --restart=unless-stopped -p 8020:8020 --device $DEVICE:$DEVICE cam --device $DEVICE'
 ```
 
+One-step with Makefile (from this directory):
+
+```sh
+make deploy-cam p=8020 d=/dev/video0
+# Where p is the port and d is the host video device
+# Wait to load, then Ctrl-C to detach from container
+```
+
 ### `front-end`
 
 You must supply the Docker build argument `api_base_url`, which is inlined into the source and points to `api`. Nginx configuration is avaiable in `nginx.conf`.
@@ -43,6 +62,14 @@ You must supply the Docker build argument `api_base_url`, which is inlined into 
 cd front-end
 docker build --build-arg api_base_url=http://192.168.1.10:8080 -t front-end .
 docker run -d --restart=unless-stopped -p 80:80 front-end
+```
+
+One-step with Makefile (from this directory):
+
+```sh
+make deploy-front-end p=80 api_base_url=http://192.168.1.10:8080
+# Where p is port and api_base_url is the...api base url
+# Wait to load, then Ctrl-C to detach from container
 ```
 
 ## Screenshot

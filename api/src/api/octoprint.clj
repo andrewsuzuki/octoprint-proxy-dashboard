@@ -78,10 +78,12 @@
   (reduce #(assoc %1 %2 (get m %2 default)) {} keys))
 
 (defn derive-temps
-  "parse temps from octoprint"
+  "parse temps from octoprint. returns :no-update if this isn't
+  actually an update (octoprint sometimes sends empty vector),
+  and nil if temps should be set to nil"
   [points]
   ; get latest data point (the last in the list, if not empty)
-  (when-let [latest (last points)]
+  (if-let [latest (last points)]
     (reduce-kv (fn [acc k v]
                  (if (or (= k :bed)
                          (-> k name (string/starts-with? "tool")))
@@ -91,12 +93,15 @@
                              (assoc :name k)))
                    acc))
                (list)
-               latest)))
+               latest)
+    (if (and (sequential? points) (empty? points))
+      :no-update
+      nil)))
 
 (defn derive-general
   "helper for generating :general state from
   :current and :history messages (in transform-payload)"
-  [p]
+  [current-state p]
   {:state {:text (-> p :state :text)
            :flags (-> p
                       :state
@@ -114,9 +119,11 @@
               :seconds-left (-> p :progress :printTimeLeft)}
    :current-z (-> p :currentZ)
    :offsets nil ; TODO offsets
-   :temps (-> p :temps derive-temps)})
+   :temps (when-let [temps (-> p :temps derive-temps)]
+            (if (= :no-update temps)
+              (-> current-state :general :temps)
+              temps))})
 
-; TODO test this thoroughly at makehaven
 (defn wipe-slicer-maybe
   "Given printer state map and current message type and payload,
   maybe set :slicer as nil depending on current message
@@ -125,8 +132,11 @@
   or if it's been more than 120 seconds since the last slicingProgress."
   [state type payload]
   (if (case type
+        ; DO NOT WIPE IF 100...it actually continues to finish slicing after
+        ; it hits 100. Wait for SlicingDone event.
         ; if slicingProgress, wipe it if it's 100
-        :slicingProgress (->> state :slicer :progress int (= 100))
+        ; :slicingProgress (->> state :slicer :progress int (= 100))
+
         ; if event, check if this is an event that implies no more slicingProgress messages are coming
         :event (->> payload
                     :type ; (the event type, not the message type)
@@ -159,7 +169,7 @@
           :connected (let [{:keys [version]} payload
                            connection {:version version}]
                        (assoc state :connection connection))
-          (:current :history) (assoc state :general (derive-general payload))
+          (:current :history) (assoc state :general (derive-general state payload))
           :slicingProgress (let [{:keys [source_path progress]} payload
                                  slicer {:source-path source_path
                                          :progress progress

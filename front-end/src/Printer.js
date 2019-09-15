@@ -206,7 +206,7 @@ function Slicer({ slicer }) {
     <p>
       <span role="img" aria-labelledby="pizza slice">
         🍕
-      </span>
+      </span>{" "}
       <strong>Slicing</strong> {sourcePath && `${sourcePath} `}
       {progress && `(${progress.toFixed(0)}%)`}
     </p>
@@ -237,19 +237,34 @@ function Printer({ printer, cam }) {
     slicer // either null or object
   } = printer;
 
+  const t = get(general, "state.text");
+
   const errorString = (() => {
     if (status === "disconnected") {
       return "Disconnected from the Octoprint server.";
     } else if (status === "unreachable") {
-      return "Couldn't connect to Octoprint server, is it on?";
+      return "Couldn't connect to Octoprint server. Is it powered on?";
     } else if (status === "incompatible") {
       return "The Octoprint server is not compatible with this proxy.";
     }
 
-    // Take hints from state text
-    const t = get(general, "state.text");
-    if (t && t.toLowerCase().includes("error")) {
-      return t;
+    // Take hints from Octoprint state text
+    // See document at front-end/possible-state-strings.md
+    if (t) {
+      const tl = t.toLowerCase();
+
+      const offlineBaseString =
+        "Octoprint isn't connected to its printer. Visit its web interface to connect manually.";
+
+      if (tl === "offline") {
+        return offlineBaseString;
+      } else if (tl.startsWith("offline") && tl.includes("error")) {
+        // handle states of format "Offline: (Error: {})"
+        // by include it as-is after the baseline offline error string
+        return offlineBaseString + " It reports: " + t;
+      } else if (tl.includes("error") || tl.includes("unknown state")) {
+        return "Octoprint encountered an error: " + t;
+      }
     }
 
     // no error
@@ -266,6 +281,7 @@ function Printer({ printer, cam }) {
         {name}
       </h2>
       <p>
+        {!errorString && t && `${t} · `}
         Last update: <TimeAgo datetime={timestamp} />
       </p>
       {errorString ? (
@@ -280,9 +296,10 @@ function Printer({ printer, cam }) {
           <TimeEstimates times={get(general, "job.times")} />
           <Filament filament={get(general, "job.filament")} />
           <Progress progress={get(general, "progress")} />
-          <Slicer slicer={slicer} />
         </React.Fragment>
       )}
+      {/* Include slicer and cam if available, even if there's an error */}
+      <Slicer slicer={slicer} />
       <Cam cam={cam} />
     </div>
   );
