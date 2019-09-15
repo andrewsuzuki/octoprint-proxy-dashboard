@@ -1,6 +1,7 @@
 import React from "react";
 import classNames from "classnames";
 import get from "lodash.get";
+import TimeAgo from "timeago-react";
 import "./Printer.css";
 
 const flagConfig = {
@@ -264,7 +265,9 @@ function Printer({ printer, cam }) {
       >
         {name}
       </h2>
-      <p>Last polled {niceTimeString(timestamp)}</p>
+      <p>
+        Last update: <TimeAgo datetime={timestamp} />
+      </p>
       {errorString ? (
         <p>
           <i>{errorString}</i>

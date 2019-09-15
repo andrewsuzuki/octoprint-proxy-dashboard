@@ -9,6 +9,7 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-scripts": "3.0.1",
+    "timeago-react": "^2.0.1",
     "whatwg-fetch": "^3.0.0"
   },
   "scripts": {
