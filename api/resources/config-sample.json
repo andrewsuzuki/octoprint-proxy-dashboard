@@ -10,7 +10,7 @@
 		{
 			"display-name": "Octoprint 7",
             "octoprint-address": "http://octopi7.makehaven",
-            "cam-address": "http://localhost:8021"
+            "cam-address": "http://octopi7.makehaven:8020"
 		}
 	]
 }

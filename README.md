@@ -72,6 +72,11 @@ make deploy-front-end p=80 api_base_url=http://192.168.1.10:8080
 # Wait to load, then Ctrl-C to detach from container
 ```
 
+## Replacing mjpg_streamer with `cam` on Octopi
+
+* stop and disable systemd services (possibly in legacy /etc/init.d/): `webcamd` and `streamCamera`
+* remove mjpg_streamer line from /etc/rc.local
+
 ## Screenshot
 
 ![octoprint proxy screenshot](screenshot.png)
