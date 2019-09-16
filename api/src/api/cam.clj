@@ -31,6 +31,18 @@
                              "response body was not data uri image"
                              "response status was not 200")))))))
 
+(defn should-expire?
+  "Determine if a cam should expire, based on
+  how much time it's been since the last update.
+  Returns nil if cam doesn't exist."
+  [max-seconds id]
+  (when-let [cam (get @cams id)]
+    (-> cam
+        :timestamp
+        (t/interval (t/now))
+        (t/in-seconds)
+        (>= max-seconds))))
+
 ;; core.async scheduler
 
 (defmacro with-interval [ms & body]
@@ -48,7 +60,10 @@
         (poll! ms id cam-address callback)
         (catch Exception e
           (println (str "Couldn't poll cam " cam-address ": " (.getMessage e)))
-          ; remove
-          (swap! cams dissoc id)
-          ; broadcast
-          (callback id nil))))))
+          (let [se? (should-expire? 120 id)]
+            (when (true? se?)
+              ; remove from cams
+              (swap! cams dissoc id))
+            (when se?
+              ; broadcast
+              (callback id nil))))))))

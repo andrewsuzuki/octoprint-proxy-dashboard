@@ -223,7 +223,7 @@ function Cam({ cam }) {
   return (
     <div className="Printer-cam">
       <img alt={`Webcam snapshot from ${niceTime}`} src={data} />
-      <span>{niceTime}</span>
+      <span><TimeAgo datetime={timestamp} /></span>
     </div>
   );
 }
