@@ -37,11 +37,6 @@
         ; catch-all
         (plain-response "An unknown error occurred" 500)))))
 
-(defn wrap-cors
-  [handler]
-  (fn [req]
-    (with-allow-origin (handler req) "*")))
-
 (defroutes app-routes
   (GET "/" [] (plain-response "octoprint proxy service" 200))
   (GET "/hydrate" [] hydrate-handler)
@@ -51,5 +46,11 @@
 (def app
   (-> (routes app-routes)
       (handler/site)
-      (wrap-remaining-exceptions)
-      (wrap-cors)))
+      (wrap-remaining-exceptions)))
+
+(defn wrap-cors
+  "Add Access-Control-Allow-Origin header
+  (applied in main.clj)"
+  [handler origin-str]
+  (fn [req]
+    (with-allow-origin (handler req) origin-str)))

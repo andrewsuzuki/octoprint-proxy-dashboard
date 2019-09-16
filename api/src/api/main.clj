@@ -5,7 +5,7 @@
             [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [api.config :refer [read-config! get-config]]
-            [api.handler :refer [app]]
+            [api.handler :as handler]
             [api.cam :as cam]
             [api.octoprint :as octoprint]
             [api.broadcast :as broadcast])
@@ -17,6 +17,10 @@
     :default 8080
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
+   ["-o" "--origins ALLOWED_ORIGINS" "Allowed origins (value of Access-Control-Allow-Origin response header)"
+    :id :allowed-origins
+    :default "*"
+    :parse-fn str]
    ["-c" "--config CONFIG_FILE" "Path to config file"
     :id :config
     :missing "Config file is required"
@@ -59,7 +63,7 @@
   (System/exit status))
 
 (defn -main [& args]
-  (let [{:keys [exit-message ok? env config port]} (validate-args args)
+  (let [{:keys [exit-message ok? env config port allowed-origins]} (validate-args args)
         dev? (= env :dev)]
     (when exit-message
       (exit! (if ok? 0 1) exit-message))
@@ -72,9 +76,10 @@
         (exit! 1 (str "Error reading config: " (.getMessage e)))))
     ; start server
     (let [reloaded-handler (if dev?
-                             (reload/wrap-reload #'app) ;; only reload when dev
-                             app)]
-      (run-server reloaded-handler {:port port})
+                             (reload/wrap-reload #'handler/app) ;; only reload when dev
+                             handler/app)
+          cors-handler (handler/wrap-cors reloaded-handler allowed-origins)]
+      (run-server cors-handler {:port port})
       (println (str "started api on port " port)))
     ; start cam polling
     (cam/poll-start! (get-config :cam-polling-interval)

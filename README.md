@@ -30,8 +30,8 @@ docker run -d --restart=unless-stopped -p 8080:8080 -v $HOME:/configs api --port
 One-step with Makefile (from this directory):
 
 ```sh
-make deploy-api p=8080 c=$(pwd)/api/resources/config-sample.json
-# Where p is the port and c is the ABSOLUTE path to your config file
+make deploy-api p=8080 o="*" c=$(pwd)/api/resources/config-sample.json
+# Where p is the port, o are the allow origins, c is the ABSOLUTE path to your config file
 # Wait to load, then Ctrl-C to detach from container
 # for network=host, use: make deploy-api-network-host p=8080 c=$(pwd)/api/resources/config-sample.json
 ```
@@ -74,7 +74,7 @@ make deploy-front-end p=80 api_base_url=http://192.168.1.10:8080
 
 ## Replacing mjpg_streamer with `cam` on Octopi
 
-* stop and disable systemd services (possibly in legacy /etc/init.d/): `webcamd` and `streamCamera`
+* `sudo systemctl stop webcamd && sudo systemctl disable webcamd`
 * remove mjpg_streamer line from /etc/rc.local
 
 ## Screenshot
