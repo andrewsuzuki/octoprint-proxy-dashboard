@@ -204,10 +204,18 @@
   callback function is called on close or new message
   with current printer state."
   [printer-id display-name address callback retry]
-  (letfn [(callback-with-swap-printers!
+  (letfn [(without-timestamp
+            [printer]
+            (dissoc printer :timestamp))
+          (callback-with-swap-printers!
             [f & args]
-            (apply swap! printers f printer-id args)
-            (callback (get @printers printer-id)))
+            (let [previous-wt (->> printer-id (get @printers) (without-timestamp))]
+              (when-not (-> (apply swap! printers f printer-id args) ; swap into printers regardless
+                            (get printer-id)
+                            (without-timestamp)
+                            (= previous-wt)) ; compare to previous state
+                ; callback if changed
+                (callback (get @printers printer-id)))))
           (re-init-and-retry!
             [status]
             (if (= :disconnected status)
@@ -226,8 +234,13 @@
             [message]
             (let [body (cheshire/parse-string message true)]
               (callback-with-swap-printers! update #(reduce-kv transform-payload % body))))]
-    ; initialize printer state
-    (callback-with-swap-printers! assoc (init-printer-state printer-id display-name :disconnected))
+    ; [re]initialize printer state, with initial status = :disconnected if
+    ; this printer is brand new, or the current status if not.
+    (callback-with-swap-printers!
+     assoc
+     (init-printer-state printer-id
+                         display-name
+                         (get-in @printers [printer-id :status] :disconnected)))
     ; attempt connection to websocket
     (if-let [conn (try
                     @(http/websocket-client (derive-uri address)
