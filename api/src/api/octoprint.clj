@@ -209,13 +209,8 @@
             (dissoc printer :timestamp))
           (callback-with-swap-printers!
             [f & args]
-            (let [previous-wt (->> printer-id (get @printers) (without-timestamp))]
-              (when-not (-> (apply swap! printers f printer-id args) ; swap into printers regardless
-                            (get printer-id)
-                            (without-timestamp)
-                            (= previous-wt)) ; compare to previous state
-                ; callback if changed
-                (callback (get @printers printer-id)))))
+            (apply swap! printers f printer-id args)
+            (callback (get @printers printer-id)))
           (re-init-and-retry!
             [status]
             (if (= :disconnected status)
