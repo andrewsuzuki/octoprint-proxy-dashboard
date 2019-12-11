@@ -1,4 +1,4 @@
-FROM clojure:lein-2.9.1
+FROM clojure:lein-2.8.1
 WORKDIR /usr/src/app
 COPY project.clj /usr/src/app/
 RUN lein deps

@@ -1,4 +1,4 @@
-FROM clojure:lein-2.9.1
+FROM clojure:lein-2.8.1
 RUN apt-get -y update && apt-get -y install ffmpeg
 WORKDIR /usr/src/app
 COPY project.clj /usr/src/app/
