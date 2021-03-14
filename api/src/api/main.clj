@@ -85,9 +85,9 @@
     (cam/poll-start! (get-config :cam-polling-interval)
                      ;; printers
                      (->> (get-config :printers)
-                          (filter :cam-address)
+                          (filter :has-cam)
                           (map (fn [printer]
-                                 (select-keys printer [:id :cam-address]))))
+                                 (select-keys printer [:id :octoprint-address]))))
                      ;; broadcast callback
                      (fn [id cam]
                        (broadcast/broadcast-cam! broadcast/channel-store id cam)))

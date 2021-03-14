@@ -3,14 +3,14 @@
 	"octoprint-reconnect-interval": 5000,
 	"printers": [
 		{
-			"display-name": "Octoprint 3",
-            "octoprint-address": "http://octopi3.makehaven",
-            "cam-address": "http://localhost:8020"
+			"display-name": "Octoprint 1",
+			"octoprint-address": "http://octopi1.makehaven",
+			"has-cam": true
 		},
 		{
 			"display-name": "Octoprint 7",
-            "octoprint-address": "http://octopi7.makehaven",
-            "cam-address": "http://octopi7.makehaven:8020"
+			"octoprint-address": "http://octopi7.makehaven",
+			"has-cam": false
 		}
 	]
 }
