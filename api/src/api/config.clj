@@ -22,10 +22,10 @@
                                      (assert (or (nil? (:has-cam printer))
                                                  (boolean? (:has-cam printer)))
                                              "a printer config has a non-bool has-cam")
-                                     ; assoc index
-                                     (assoc printer :index i)
-                                     ; assoc unique id
-                                     (assoc printer :id (.toString (java.util.UUID/randomUUID))))
+                                     ; assoc index and unique id
+                                     (assoc printer
+                                            :index i
+                                            :id (.toString (java.util.UUID/randomUUID))))
                                    printers))))
         c (merge default-config p)]
     ; light validation

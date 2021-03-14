@@ -161,7 +161,7 @@
   (cond
     ; new :connected message, but incompatible. re-init state, marked :incompatible
     (and (= type :connected) (-> payload :version compatible-version? not))
-    (init-printer-state (:id state) (:display-name state) :incompatible)
+    (init-printer-state (:id state) (:index state) (:display-name state) :incompatible)
     ; new message, but existing state is marked incompatible. do nothing
     (-> state :status (= :incompatible))
     state
