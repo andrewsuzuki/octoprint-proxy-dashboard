@@ -13,8 +13,8 @@
   (let [p (-> (slurp file)
               (cheshire/parse-string true)
               (update :printers (fn [printers]
-                                  (map
-                                   (fn [printer]
+                                  (map-indexed
+                                   (fn [i printer]
                                      ; light validation
                                      (assert (every? #(and (contains? printer %) (not (string/blank? (% printer))))
                                                      #{:display-name :octoprint-address})
@@ -22,6 +22,8 @@
                                      (assert (or (nil? (:cam-address printer))
                                                  (not (string/blank? (:cam-address printer))))
                                              "a printer config has a blank cam-address, either omit or fill it in")
+                                     ; assoc index
+                                     (assoc printer :index i)
                                      ; assoc unique id
                                      (assoc printer :id (.toString (java.util.UUID/randomUUID))))
                                    printers))))

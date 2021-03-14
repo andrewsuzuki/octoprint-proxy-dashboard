@@ -12,6 +12,7 @@
 
 ;; Printer state shape:
 ;; {:id string (uuid)
+;;  :index int
 ;;  :display-name string
 ;;  :status #{:connected :disconnected :unreachable (connection attempted but failed) :incompatible (incompatible version)}
 ;;  :timestamp JodaTime (last received message)
@@ -51,9 +52,10 @@
 (defn assoc-current-timestamp [printer]
   (assoc printer :timestamp (t/now)))
 
-(defn init-printer-state [printer-id display-name status]
+(defn init-printer-state [printer-id index display-name status]
   (assoc-current-timestamp
    {:id printer-id
+    :index index
     :display-name display-name
     :status status
     :connection nil :general nil :slicer nil}))
@@ -203,7 +205,7 @@
   setting it up to consume new messages.
   callback function is called on close or new message
   with current printer state."
-  [printer-id display-name address callback retry]
+  [printer-id index display-name address callback retry]
   (letfn [(without-timestamp
             [printer]
             (dissoc printer :timestamp))
@@ -219,7 +221,7 @@
             ; clean (re-initialize) printer state
             (callback-with-swap-printers!
              assoc
-             (init-printer-state printer-id display-name status))
+             (init-printer-state printer-id index display-name status))
             ; retry connection
             (retry))
           (on-closed
@@ -234,6 +236,7 @@
     (callback-with-swap-printers!
      assoc
      (init-printer-state printer-id
+                         index
                          display-name
                          (get-in @printers [printer-id :status] :disconnected)))
     ; attempt connection to websocket
@@ -252,7 +255,7 @@
 (defn connect!
   "connect-once!, but if it fails or is closed, try to
   connect again after a specified time interval (ms)."
-  [ms printer-id display-name address callback]
+  [ms printer-id index display-name address callback]
   (let [; channel with sliding buffer of 1 to ensure multiple
         ; retries are never sent off for the same
         ; connection failure of this printer
@@ -262,7 +265,7 @@
     (a/go-loop []
       (when (a/<! needs-retry?)
         (try
-          (connect-once! printer-id display-name address callback retry)
+          (connect-once! printer-id index display-name address callback retry)
           (catch Exception e
             ; catch-all
             (retry))))

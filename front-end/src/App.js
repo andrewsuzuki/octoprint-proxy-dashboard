@@ -1,5 +1,6 @@
 import React from "react";
 import omit from "lodash.omit";
+import sortby from "lodash.sortby";
 
 import "./App.css";
 import Printer from "./Printer";
@@ -192,7 +193,7 @@ export default class App extends React.Component {
             <p>{connectionErrorString}</p>
           ) : isLoading ? null : (
             <div className="grid">
-              {printers.map(printer => (
+              {sortby(printers, printer => printer.index).map(printer => (
                 <div className="col-md-6 col-xlg-4" key={printer.id}>
                   <Printer printer={printer} cam={cams[printer.id]} />
                 </div>
