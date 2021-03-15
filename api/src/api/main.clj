@@ -94,13 +94,15 @@
     ; connect to octoprints
     (let [printer-configs (->> (get-config :printers)
                                (map (fn [printer]
-                                      (select-keys printer [:id :index :display-name :octoprint-address]))))
+                                      (select-keys printer [:id :index :display-name
+                                                            :octoprint-address :username :password]))))
           callback (fn [printer]
                      (broadcast/broadcast-printer! broadcast/channel-store printer))]
-      (doseq [{:keys [id index display-name octoprint-address]} printer-configs]
+      (doseq [{:keys [id index display-name octoprint-address username password]} printer-configs]
         (octoprint/connect! (get-config :octoprint-reconnect-interval)
                             id
                             index
                             display-name
                             octoprint-address
+                            username password
                             callback)))))

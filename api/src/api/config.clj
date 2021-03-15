@@ -17,8 +17,8 @@
                                    (fn [i printer]
                                      ; light validation
                                      (assert (every? #(and (contains? printer %) (not (string/blank? (% printer))))
-                                                     #{:display-name :octoprint-address})
-                                             "a printer config is missing display-name and/or octoprint-address")
+                                                     #{:display-name :octoprint-address :username :password})
+                                             "a printer config is missing one or more of display-name, octoprint-address, username, password")
                                      (assert (or (nil? (:has-cam printer))
                                                  (boolean? (:has-cam printer)))
                                              "a printer config has a non-bool has-cam")

@@ -186,6 +186,17 @@
 
 ;; Communication
 
+(defn login!
+  [address username password]
+  (let [endpoint (uri/join address "/api/login")
+        body (cheshire/generate-string {:user username :pass password})
+        {:keys [status body]} (try @(http/post endpoint {:body body}) (catch Exception e nil))
+        session (-> body
+                    (cheshire/parse-string true)
+                    :session)]
+    (when (and (= status 200) (string? session))
+      session)))
+
 (defn derive-uri
   "Derive Octoprint Push API uri string from the configured base server address.
   Uses SockJS's raw websocket feature, since there isn't a clojure/java SockJS client:
@@ -205,7 +216,7 @@
   setting it up to consume new messages.
   callback function is called on close or new message
   with current printer state."
-  [printer-id index display-name address callback retry]
+  [printer-id index display-name address username password callback retry]
   (letfn [(without-timestamp
             [printer]
             (dissoc printer :timestamp))
@@ -239,23 +250,29 @@
                          index
                          display-name
                          (get-in @printers [printer-id :status] :disconnected)))
-    ; attempt connection to websocket
-    (if-let [conn (try
-                    @(http/websocket-client (derive-uri address)
-                                            {:max-frame-payload 2621440}) ; increase to 2.5MB; 65536 wasn't enough
-                    (catch Exception e
-                      ; return nil (retry below)
-                      nil))]
-      (do
-        (stream/on-closed conn on-closed)
-        (stream/consume on-message conn))
-      ; no conn, so retry
-      (re-init-and-retry! :unreachable))))
+    ; log in
+    (let [?session (login! address username password)]
+      ; attempt connection to websocket
+      (if-let [conn (and ?session
+                         (try
+                          @(http/websocket-client (derive-uri address)
+                                                  {:max-frame-payload 2621440}) ; increase to 2.5MB; 65536 wasn't enough
+                          (catch Exception e
+                            ; return nil (retry below)
+                            nil)))]
+        (do
+          ; send auth message
+          (stream/put! conn (cheshire/generate-string {:auth (str username ":" ?session)}))
+          ; attach handlers
+          (stream/on-closed conn on-closed)
+          (stream/consume on-message conn))
+        ; no conn, so retry
+        (re-init-and-retry! :unreachable)))))
 
 (defn connect!
   "connect-once!, but if it fails or is closed, try to
   connect again after a specified time interval (ms)."
-  [ms printer-id index display-name address callback]
+  [ms printer-id index display-name address username password callback]
   (let [; channel with sliding buffer of 1 to ensure multiple
         ; retries are never sent off for the same
         ; connection failure of this printer
@@ -265,7 +282,7 @@
     (a/go-loop []
       (when (a/<! needs-retry?)
         (try
-          (connect-once! printer-id index display-name address callback retry)
+          (connect-once! printer-id index display-name address username password callback retry)
           (catch Exception e
             ; catch-all
             (retry))))
