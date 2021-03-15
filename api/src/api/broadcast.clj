@@ -46,9 +46,11 @@
       (broadcast store (constantly m)))))
 
 (defn broadcast-printer! [store printer]
-  (let [printer-final (stringify-timestamp-m printer)
+  (let [printer-final (-> printer
+                          stringify-timestamp-m
+                          (dissoc :username :password))
         m {:type :new-printer
-           :printer-id (-> printer :id)
+           :printer-id (:id printer-final)
            :timestamp (:timestamp printer-final)
            :data printer-final}]
     (broadcast store (constantly m))))

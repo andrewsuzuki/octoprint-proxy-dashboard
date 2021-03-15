@@ -188,12 +188,17 @@
 
 (defn login!
   [address username password]
-  (let [endpoint (uri/join address "/api/login")
-        body (cheshire/generate-string {:user username :pass password})
-        {:keys [status body]} (try @(http/post endpoint {:body body}) (catch Exception e nil))
-        session (-> body
-                    (cheshire/parse-string true)
-                    :session)]
+  (let [endpoint (str (uri/join address "/api/login"))
+        request-body (cheshire/generate-string {:user username :pass password})
+        ?result (try
+                  @(http/post endpoint {:body request-body
+                                        :headers {"Content-Type" "application/json"}})
+                  (catch Exception e nil))
+        {:keys [status body]} ?result
+        session (some-> body
+                        slurp
+                        (cheshire/parse-string true)
+                        :session)]
     (when (and (= status 200) (string? session))
       session)))
 
@@ -251,9 +256,9 @@
                          display-name
                          (get-in @printers [printer-id :status] :disconnected)))
     ; log in
-    (let [?session (login! address username password)]
+    (let [?session (and username (login! address username password))]
       ; attempt connection to websocket
-      (if-let [conn (and ?session
+      (if-let [conn (and (or ?session (not username))
                          (try
                           @(http/websocket-client (derive-uri address)
                                                   {:max-frame-payload 2621440}) ; increase to 2.5MB; 65536 wasn't enough
@@ -261,8 +266,9 @@
                             ; return nil (retry below)
                             nil)))]
         (do
-          ; send auth message
-          (stream/put! conn (cheshire/generate-string {:auth (str username ":" ?session)}))
+          (when username
+            ; send auth message
+            (stream/put! conn (cheshire/generate-string {:auth (str username ":" ?session)})))
           ; attach handlers
           (stream/on-closed conn on-closed)
           (stream/consume on-message conn))

@@ -17,11 +17,14 @@
                                    (fn [i printer]
                                      ; light validation
                                      (assert (every? #(and (contains? printer %) (not (string/blank? (% printer))))
-                                                     #{:display-name :octoprint-address :username :password})
-                                             "a printer config is missing one or more of display-name, octoprint-address, username, password")
+                                                     #{:display-name :octoprint-address})
+                                             "a printer config is missing one or more of display-name, octoprint-address")
                                      (assert (or (nil? (:has-cam printer))
                                                  (boolean? (:has-cam printer)))
                                              "a printer config has a non-bool has-cam")
+                                     (assert (or (and (string? (:username printer) (:password printer)))
+                                                 (not-any? #(contains? printer %) #{:username :password}))
+                                             "a printer config has a malformed username/password combo")
                                      ; assoc index and unique id
                                      (assoc printer
                                             :index i
