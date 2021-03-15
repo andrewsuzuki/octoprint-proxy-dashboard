@@ -22,7 +22,7 @@
                                      (assert (or (nil? (:has-cam printer))
                                                  (boolean? (:has-cam printer)))
                                              "a printer config has a non-bool has-cam")
-                                     (assert (or (and (string? (:username printer) (:password printer)))
+                                     (assert (or (every? #(string? (% printer)) #{:username :password})
                                                  (not-any? #(contains? printer %) #{:username :password}))
                                              "a printer config has a malformed username/password combo")
                                      ; assoc index and unique id
