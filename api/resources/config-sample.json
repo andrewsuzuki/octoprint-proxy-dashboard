@@ -5,6 +5,8 @@
 		{
 			"display-name": "Octoprint 1",
 			"octoprint-address": "http://octopi1.makehaven",
+			"username": "foo",
+			"password": "bar",
 			"has-cam": true
 		},
 		{
